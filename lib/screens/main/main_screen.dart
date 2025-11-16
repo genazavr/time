@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'dashboard_screen.dart';
 import '../calendar/calendar_screen.dart';
 import '../pomodoro/pomodoro_screen.dart';
 import '../eisenhower/eisenhower_screen.dart';
@@ -99,13 +100,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(Icons.dashboard_outline, 'Главная', 0),
+                _buildNavItem(Icons.dashboard_outlined, 'Главная', 0),
                 _buildNavItem(Icons.calendar_today_outlined, 'Календарь', 1),
                 _buildNavItem(Icons.timer_outlined, 'Помодоро', 2),
                 _buildNavItem(Icons.grid_view_outlined, 'Эйзенхауэр', 3),
                 _buildNavItem(Icons.assignment_outlined, 'ДЗ', 4),
-                _buildNavItem(Icons.note_outline, 'Заметки', 5),
-                _buildNavItem(Icons.schedule_outline, 'Расписание', 6),
+                _buildNavItem(Icons.note_outlined, 'Заметки', 5),
+                _buildNavItem(Icons.schedule, 'Расписание', 6),
                 _buildNavItem(Icons.headphones_outlined, 'Подкасты', 7),
                 _buildNavItem(Icons.person_outline, 'Профиль', 8),
               ],

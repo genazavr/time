@@ -103,7 +103,7 @@ class HomeworkService {
     
     await _database.child('users/$userId/homework/$homeworkId').update({
       'isCompleted': newStatus,
-      'completedAt': newStatus ? DateTime.now().toIso8601String() : homework.completedAt.toIso8601String(),
+      'completedAt': newStatus ? DateTime.now().toIso8601String() : (homework.completedAt?.toIso8601String() ?? ''),
       'updatedAt': DateTime.now().toIso8601String(),
     });
   }

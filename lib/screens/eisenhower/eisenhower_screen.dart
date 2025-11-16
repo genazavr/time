@@ -595,10 +595,10 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
             Text('Процент выполнения: ${_statistics['completionRate'] ?? 0}%'),
             const SizedBox(height: 16),
             const Text('Распределение по квадрантам:'),
-            final quadrantDist = _statistics['quadrantDistribution'] as Map<String, dynamic>? ?? {};
-            for (int i = 1; i <= 4; i++) {
-              Text('  Квадрант $i: ${quadrantDist[i.toString()] ?? 0} задач');
-            },
+            ...[
+              for (int i = 1; i <= 4; i++)
+                Text('  Квадрант $i: ${(_statistics['quadrantDistribution'] as Map<String, dynamic>? ?? {})[i.toString()] ?? 0} задач'),
+            ],
           ],
         ),
         actions: [

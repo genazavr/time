@@ -24,7 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (user != null) {
       final userData = await _firebaseService.getUserData(user.uid);
       setState(() {
-        _userData = userData;
+        _userData = userData?.cast<String, dynamic>() ?? {};
       });
     }
   }
@@ -98,7 +98,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            _userData?['name'] ?? user?.email?.split('@')[0] ?? 'Пользователь',
+            _userData['name'] ?? user?.email?.split('@')[0] ?? 'Пользователь',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w700,
@@ -113,7 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Участник с ${_formatDate(_userData?['createdAt'])}',
+            'Участник с ${_formatDate(_userData['createdAt'])}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Colors.white.withOpacity(0.8),
             ),

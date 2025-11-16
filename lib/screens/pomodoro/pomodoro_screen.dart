@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../models/pomodoro_session.dart';
 import '../../services/pomodoro_service.dart';
@@ -19,7 +20,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
   late AnimationController _pulseController;
   late AnimationController _progressController;
   late Animation<double> _pulseAnimation;
-  late Animation<double> _progressAnimation;
   
   Timer? _timer;
   int _remainingSeconds = 25 * 60;
@@ -125,7 +125,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
         createdAt: DateTime.now(),
       );
       
-      final sessionId = await _pomodoroService.startSession(session);
+      await _pomodoroService.startSession(session);
       
       setState(() {
         _isRunning = true;
@@ -197,7 +197,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
       await _audioPlayer.setAsset('assets/sounds/bell.mp3');
       await _audioPlayer.play();
     } catch (e) {
-      print('Error playing sound: $e');
+      debugPrint('Error playing sound: $e');
     }
   }
 
@@ -412,7 +412,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     Text(
-                      '${_sessionsCompleted}',
+                      '$_sessionsCompleted',
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: AppTheme.secondaryColor,
                         fontWeight: FontWeight.bold,
