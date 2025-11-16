@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'services/firebase_service.dart';
+import 'services/notification_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/registration_screen.dart';
-import 'screens/home/home_screen.dart';
+import 'screens/main/main_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final firebaseService = FirebaseService();
   await firebaseService.initialize();
+  
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+  await notificationService.requestPermissions();
+  
   runApp(const MyApp());
 }
 
@@ -104,7 +110,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
 
     if (_isAuthenticated) {
-      return HomeScreen(onLogout: _handleLogout);
+      return MainScreen();
     }
 
     if (_showRegistration) {
