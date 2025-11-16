@@ -498,7 +498,7 @@ class _AddPodcastDialogState extends State<AddPodcastDialog> {
     _imageUrlController = TextEditingController(text: podcast?.imageUrl ?? '');
     _selectedCategory = podcast?.category ?? (widget.categories.isNotEmpty ? widget.categories.first : 'Образование');
     _durationMinutes = podcast?.duration.inMinutes ?? 30;
-    _durationSeconds = podcast?.duration.inSeconds % 60 ?? 0;
+    _durationSeconds = (podcast?.duration.inSeconds ?? 0) % 60;
   }
 
   @override
@@ -651,9 +651,9 @@ class _AddPodcastDialogState extends State<AddPodcastDialog> {
       id: widget.existingPodcast?.id ?? '',
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim().isEmpty 
-          ? null 
+          ? 'Без описания' 
           : _descriptionController.text.trim(),
-      author: _authorController.text.trim().isEmpty ? '' : _authorController.text.trim(),
+      author: _authorController.text.trim().isEmpty ? 'Неизвестный автор' : _authorController.text.trim(),
       audioUrl: _audioUrlController.text.trim(),
       imageUrl: _imageUrlController.text.trim().isEmpty 
           ? null 

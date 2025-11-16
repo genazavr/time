@@ -59,7 +59,6 @@ class ScheduleService {
     if (userId == null) return [];
 
     final startOfDay = DateTime(day.year, day.month, day.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
 
     final snapshot = await _database.child('users/$userId/schedules').get();
     if (!snapshot.exists) return [];

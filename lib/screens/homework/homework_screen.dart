@@ -294,7 +294,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> with TickerProviderStat
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: homework.priorityColor.withOpacity(0.1),
+                      color: Color(int.parse(homework.priorityColor.replaceFirst('#', '0xFF'))).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -535,10 +535,10 @@ class _HomeworkScreenState extends State<HomeworkScreen> with TickerProviderStat
             Text('Процент выполнения: ${_statistics['completionRate'] ?? 0}%'),
             const SizedBox(height: 16),
             const Text('По предметам:'),
-            final subjects = _statistics['subjects'] as Map<String, dynamic>? ?? {};
-            for (final entry in subjects.entries) {
-              Text('  ${entry.key}: ${entry.value}');
-            },
+            ...[
+              for (final entry in (_statistics['subjects'] as Map<String, dynamic>? ?? {}).entries)
+                Text('  ${entry.key}: ${entry.value}'),
+            ],
           ],
         ),
         actions: [

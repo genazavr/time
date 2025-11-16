@@ -122,4 +122,8 @@ class EisenhowerTask {
         return '#3B82F6'; // Синий
     }
   }
+
+  bool get isOverdue {
+    return !isCompleted && dueDate != null && DateTime.now().isAfter(dueDate!);
+  }
 }

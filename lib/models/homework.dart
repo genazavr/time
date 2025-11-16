@@ -6,7 +6,7 @@ class Homework {
   final DateTime dueDate;
   final DateTime? assignedDate;
   final bool isCompleted;
-  final DateTime completedAt;
+  final DateTime? completedAt;
   final int priority; // 0-3 (низкий, средний, высокий, критический)
   final List<String> attachments;
   final List<String> tags;
@@ -23,7 +23,7 @@ class Homework {
     required this.dueDate,
     this.assignedDate,
     this.isCompleted = false,
-    this.completedAt = DateTime.now(),
+    this.completedAt,
     this.priority = 1,
     this.attachments = const [],
     this.tags = const [],
@@ -42,7 +42,7 @@ class Homework {
       dueDate: DateTime.parse(map['dueDate']),
       assignedDate: map['assignedDate'] != null ? DateTime.parse(map['assignedDate']) : null,
       isCompleted: map['isCompleted'] ?? false,
-      completedAt: DateTime.parse(map['completedAt'] ?? DateTime.now().toIso8601String()),
+      completedAt: map['completedAt'] != null ? DateTime.parse(map['completedAt']) : null,
       priority: map['priority'] ?? 1,
       attachments: List<String>.from(map['attachments'] ?? []),
       tags: List<String>.from(map['tags'] ?? []),
@@ -61,7 +61,7 @@ class Homework {
       'dueDate': dueDate.toIso8601String(),
       'assignedDate': assignedDate?.toIso8601String(),
       'isCompleted': isCompleted,
-      'completedAt': completedAt.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
       'priority': priority,
       'attachments': attachments,
       'tags': tags,

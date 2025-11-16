@@ -120,16 +120,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
           formatButtonTextStyle: const TextStyle(color: Colors.white),
           titleTextStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
-          ),
+          ) ?? const TextStyle(fontWeight: FontWeight.w600),
         ),
         daysOfWeekStyle: DaysOfWeekStyle(
           weekdayStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w500,
-          ),
+          ) ?? const TextStyle(fontWeight: FontWeight.w500),
           weekendStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w500,
             color: AppTheme.errorColor,
-          ),
+          ) ?? TextStyle(fontWeight: FontWeight.w500, color: AppTheme.errorColor),
         ),
         calendarStyle: CalendarStyle(
           markersMaxCount: 3,
@@ -145,10 +145,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             color: AppTheme.primaryColor,
             shape: BoxShape.circle,
           ),
-          defaultTextStyle: Theme.of(context).textTheme.bodyMedium,
+          defaultTextStyle: Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
           weekendTextStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: AppTheme.errorColor,
-          ),
+          ) ?? TextStyle(color: AppTheme.errorColor),
           selectedTextStyle: const TextStyle(color: Colors.white),
           todayTextStyle: const TextStyle(color: AppTheme.primaryColor),
         ),

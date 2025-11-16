@@ -1,4 +1,4 @@
-import '../models/note_model.dart';
+import '../models/note.dart';
 import 'firebase_service.dart';
 
 class NoteService {
@@ -11,48 +11,48 @@ class NoteService {
 
   NoteService._internal();
 
-  Future<void> addNote(String userId, NoteModel note) async {
-    final ref = _firebaseService.database.ref('users/$userId/notes').push();
-    await ref.set(note.toMap());
-  }
-
-  Future<List<NoteModel>> getNotes(String userId) async {
-    final snapshot = await _firebaseService.database.ref('users/$userId/notes').get();
-    if (snapshot.exists) {
-      final notes = <NoteModel>[];
-      final data = snapshot.value as Map<dynamic, dynamic>;
-      data.forEach((key, value) {
-        notes.add(NoteModel.fromMap(value, key, userId));
-      });
-      return notes;
+  Future<void> addNote(Note note) async {
+    final user = _firebaseService.getCurrentUser();
+    if (user != null) {
+      final ref = _firebaseService.database.ref('users/${user.uid}/notes').push();
+      await ref.set(note.toMap());
     }
-    return [];
   }
 
-  Future<void> updateNote(String userId, String noteId, NoteModel note) async {
-    await _firebaseService.database
-        .ref('users/$userId/notes/$noteId')
-        .update(note.toMap());
+  Stream<List<Note>> getNotes() {
+    final user = _firebaseService.getCurrentUser();
+    if (user != null) {
+      return _firebaseService.database
+          .ref('users/${user.uid}/notes')
+          .onValue
+          .map((event) {
+            if (event.snapshot.exists) {
+              final notes = <Note>[];
+              final data = event.snapshot.value as Map<dynamic, dynamic>;
+              data.forEach((key, value) {
+                notes.add(Note.fromMap(value, key));
+              });
+              return notes;
+            }
+            return [];
+          });
+    }
+    return Stream.value([]);
   }
 
-  Future<void> deleteNote(String userId, String noteId) async {
-    await _firebaseService.database.ref('users/$userId/notes/$noteId').remove();
+  Future<void> updateNote(Note updatedNote) async {
+    final user = _firebaseService.getCurrentUser();
+    if (user != null) {
+      await _firebaseService.database
+          .ref('users/${user.uid}/notes/${updatedNote.id}')
+          .update(updatedNote.toMap());
+    }
   }
 
-  Stream<List<NoteModel>> watchNotes(String userId) {
-    return _firebaseService.database
-        .ref('users/$userId/notes')
-        .onValue
-        .map((event) {
-          if (event.snapshot.exists) {
-            final notes = <NoteModel>[];
-            final data = event.snapshot.value as Map<dynamic, dynamic>;
-            data.forEach((key, value) {
-              notes.add(NoteModel.fromMap(value, key, userId));
-            });
-            return notes;
-          }
-          return [];
-        });
+  Future<void> deleteNote(String noteId) async {
+    final user = _firebaseService.getCurrentUser();
+    if (user != null) {
+      await _firebaseService.database.ref('users/${user.uid}/notes/$noteId').remove();
+    }
   }
 }
