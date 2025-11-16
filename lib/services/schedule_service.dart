@@ -1,4 +1,3 @@
-import 'package:firebase_database/firebase_database.dart';
 import '../models/schedule_model.dart';
 import 'firebase_service.dart';
 

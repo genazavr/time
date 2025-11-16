@@ -5,9 +5,9 @@ class HomeScreen extends StatefulWidget {
   final Function() onLogout;
 
   const HomeScreen({
-    Key? key,
+    super.key,
     required this.onLogout,
-  }) : super(key: key);
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
