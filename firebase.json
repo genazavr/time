@@ -1,18 +1,1 @@
-{
-  "projects": {
-    "default": "katenka-74591"
-  },
-  "hosting": {
-    "public": "build/web",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  },
-  "database": {
-    "rules": "database.rules.json"
-  }
-}
+{"projects":{"default":"katenka-74591"},"hosting":{"public":"build/web","ignore":["firebase.json","**/.*","**/node_modules/**"],"rewrites":[{"source":"**","destination":"/index.html"}]},"database":{"rules":"database.rules.json"},"flutter":{"platforms":{"android":{"default":{"projectId":"katenka-74591","appId":"1:439851419572:android:f1a77c0f05793a296a94e1","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"katenka-74591","configurations":{"android":"1:439851419572:android:f1a77c0f05793a296a94e1","ios":"1:439851419572:ios:95ddcf513f1b35bb6a94e1","macos":"1:439851419572:ios:95ddcf513f1b35bb6a94e1","web":"1:439851419572:web:ef9f9ef2dbfa0f346a94e1","windows":"1:439851419572:web:b6d8813b888b745d6a94e1"}}}}}}
