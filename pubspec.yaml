@@ -35,6 +35,32 @@ dependencies:
   firebase_core: ^3.0.0
   firebase_auth: ^5.0.0
   firebase_database: ^11.0.0
+  
+  # UI и анимации
+  google_fonts: ^6.2.1
+  lottie: ^3.1.2
+  flutter_staggered_animations: ^1.1.1
+  animate_do: ^3.3.4
+  
+  # Календарь и дата
+  table_calendar: ^3.1.2
+  intl: ^0.19.0
+  
+  # Уведомления
+  flutter_local_notifications: ^17.2.2
+  
+  # Звук и медиа
+  just_audio: ^0.9.40
+  audio_session: ^0.1.21
+  
+  # Графики и диаграммы
+  fl_chart: ^0.68.0
+  
+  # Утилиты
+  uuid: ^4.4.2
+  shared_preferences: ^2.3.2
+  permission_handler: ^11.3.1
+  timezone: ^0.9.4
 
 dev_dependencies:
   flutter_test:
@@ -59,9 +85,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/sounds/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

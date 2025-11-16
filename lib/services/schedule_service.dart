@@ -1,58 +1,97 @@
-import '../models/schedule_model.dart';
-import 'firebase_service.dart';
+import 'dart:async';
+import 'package:firebase_database/firebase_database.dart';
+import '../models/schedule.dart';
+import '../services/firebase_service.dart';
 
 class ScheduleService {
-  static final ScheduleService _instance = ScheduleService._internal();
-  final _firebaseService = FirebaseService();
+  final FirebaseService _firebaseService = FirebaseService();
+  final DatabaseReference _database = FirebaseDatabase.instance.ref();
 
-  factory ScheduleService() {
-    return _instance;
+  Stream<List<Schedule>> getSchedules() {
+    final userId = _firebaseService.getCurrentUser()?.uid;
+    if (userId == null) return Stream.value([]);
+
+    return _database.child('users/$userId/schedules').onValue.map((event) {
+      final Map<dynamic, dynamic>? schedulesMap = event.snapshot.value as Map<dynamic, dynamic>?;
+      if (schedulesMap == null) return [];
+
+      return schedulesMap.entries.map((entry) {
+        return Schedule.fromMap(Map<String, dynamic>.from(entry.value), entry.key);
+      }).toList();
+    });
   }
 
-  ScheduleService._internal();
+  Future<String> addSchedule(Schedule schedule) async {
+    final userId = _firebaseService.getCurrentUser()?.uid;
+    if (userId == null) throw Exception('User not authenticated');
 
-  Future<void> addSchedule(String userId, ScheduleModel schedule) async {
-    final ref = _firebaseService.database.ref('users/$userId/schedules').push();
-    await ref.set(schedule.toMap());
+    final scheduleRef = _database.child('users/$userId/schedules').push();
+    await scheduleRef.set(schedule.toMap());
+    return scheduleRef.key!;
   }
 
-  Future<List<ScheduleModel>> getSchedules(String userId) async {
-    final snapshot = await _firebaseService.database.ref('users/$userId/schedules').get();
-    if (snapshot.exists) {
-      final schedules = <ScheduleModel>[];
-      final data = snapshot.value as Map<dynamic, dynamic>;
-      data.forEach((key, value) {
-        schedules.add(ScheduleModel.fromMap(value, key, userId));
-      });
-      return schedules;
-    }
-    return [];
+  Future<void> updateSchedule(Schedule schedule) async {
+    final userId = _firebaseService.getCurrentUser()?.uid;
+    if (userId == null) throw Exception('User not authenticated');
+
+    await _database.child('users/$userId/schedules/${schedule.id}').update(schedule.toMap());
   }
 
-  Future<void> updateSchedule(String userId, String scheduleId, ScheduleModel schedule) async {
-    await _firebaseService.database
-        .ref('users/$userId/schedules/$scheduleId')
-        .update(schedule.toMap());
+  Future<void> deleteSchedule(String scheduleId) async {
+    final userId = _firebaseService.getCurrentUser()?.uid;
+    if (userId == null) throw Exception('User not authenticated');
+
+    await _database.child('users/$userId/schedules/$scheduleId').remove();
   }
 
-  Future<void> deleteSchedule(String userId, String scheduleId) async {
-    await _firebaseService.database.ref('users/$userId/schedules/$scheduleId').remove();
+  Future<Schedule?> getSchedule(String scheduleId) async {
+    final userId = _firebaseService.getCurrentUser()?.uid;
+    if (userId == null) throw Exception('User not authenticated');
+
+    final snapshot = await _database.child('users/$userId/schedules/$scheduleId').get();
+    if (!snapshot.exists) return null;
+
+    return Schedule.fromMap(Map<String, dynamic>.from(snapshot.value as Map), scheduleId);
   }
 
-  Stream<List<ScheduleModel>> watchSchedules(String userId) {
-    return _firebaseService.database
-        .ref('users/$userId/schedules')
-        .onValue
-        .map((event) {
-          if (event.snapshot.exists) {
-            final schedules = <ScheduleModel>[];
-            final data = event.snapshot.value as Map<dynamic, dynamic>;
-            data.forEach((key, value) {
-              schedules.add(ScheduleModel.fromMap(value, key, userId));
-            });
-            return schedules;
-          }
-          return [];
-        });
+  Future<List<Schedule>> getSchedulesForDay(DateTime day) async {
+    final userId = _firebaseService.getCurrentUser()?.uid;
+    if (userId == null) return [];
+
+    final startOfDay = DateTime(day.year, day.month, day.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    final snapshot = await _database.child('users/$userId/schedules').get();
+    if (!snapshot.exists) return [];
+
+    final Map<dynamic, dynamic>? schedulesMap = snapshot.value as Map<dynamic, dynamic>?;
+    if (schedulesMap == null) return [];
+
+    return schedulesMap.entries.map((entry) {
+      final schedule = Schedule.fromMap(Map<String, dynamic>.from(entry.value), entry.key);
+      final scheduleDate = DateTime(schedule.startTime.year, schedule.startTime.month, schedule.startTime.day);
+      final isSameDay = scheduleDate.isAtSameMomentAs(startOfDay);
+      return isSameDay ? schedule : null;
+    }).where((schedule) => schedule != null).cast<Schedule>().toList();
+  }
+
+  Future<List<Schedule>> getSchedulesForWeek(DateTime weekStart) async {
+    final userId = _firebaseService.getCurrentUser()?.uid;
+    if (userId == null) return [];
+
+    final weekEnd = weekStart.add(const Duration(days: 7));
+
+    final snapshot = await _database.child('users/$userId/schedules').get();
+    if (!snapshot.exists) return [];
+
+    final Map<dynamic, dynamic>? schedulesMap = snapshot.value as Map<dynamic, dynamic>?;
+    if (schedulesMap == null) return [];
+
+    return schedulesMap.entries.map((entry) {
+      final schedule = Schedule.fromMap(Map<String, dynamic>.from(entry.value), entry.key);
+      final isInWeek = schedule.startTime.isAfter(weekStart.subtract(const Duration(seconds: 1))) && 
+                       schedule.startTime.isBefore(weekEnd);
+      return isInWeek ? schedule : null;
+    }).where((schedule) => schedule != null).cast<Schedule>().toList();
   }
 }
