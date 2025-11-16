@@ -1,0 +1,89 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        ".validate": "newData.hasChildren(['name', 'email', 'createdAt'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "email": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "createdAt": {
+          ".validate": "newData.isString()"
+        },
+        "tasks": {
+          "$taskId": {
+            ".read": "true",
+            ".write": "true",
+            ".validate": "newData.hasChildren(['title', 'dueDate', 'priority', 'status', 'createdAt'])",
+            "title": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "description": {
+              ".validate": "newData.isString()"
+            },
+            "dueDate": {
+              ".validate": "newData.isString()"
+            },
+            "priority": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 4"
+            },
+            "status": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 3"
+            },
+            "createdAt": {
+              ".validate": "newData.isString()"
+            }
+          }
+        },
+        "notes": {
+          "$noteId": {
+            ".read": "true",
+            ".write": "true",
+            ".validate": "newData.hasChildren(['title', 'content', 'createdAt', 'updatedAt'])",
+            "title": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "content": {
+              ".validate": "newData.isString()"
+            },
+            "createdAt": {
+              ".validate": "newData.isString()"
+            },
+            "updatedAt": {
+              ".validate": "newData.isString()"
+            }
+          }
+        },
+        "schedules": {
+          "$scheduleId": {
+            ".read": "true",
+            ".write": "true",
+            ".validate": "newData.hasChildren(['lessonName', 'dayOfWeek', 'startTime', 'endTime', 'location', 'instructor'])",
+            "lessonName": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "dayOfWeek": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 7"
+            },
+            "startTime": {
+              ".validate": "newData.isString()"
+            },
+            "endTime": {
+              ".validate": "newData.isString()"
+            },
+            "location": {
+              ".validate": "newData.isString()"
+            },
+            "instructor": {
+              ".validate": "newData.isString()"
+            }
+          }
+        }
+      }
+    }
+  }
+}
