@@ -183,8 +183,8 @@ class _HomeworkScreenState extends State<HomeworkScreen> with TickerProviderStat
                 });
                 _applyFilters();
               },
-              backgroundColor: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : null,
-              selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+              backgroundColor: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.1) : null,
+              selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
             ),
           );
         },
@@ -278,7 +278,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> with TickerProviderStat
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _getSubjectColor(homework.subject).withOpacity(0.1),
+                      color: _getSubjectColor(homework.subject).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(

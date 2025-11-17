@@ -97,7 +97,7 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
           Text(
             'Активных задач: ${_statistics['pendingTasks'] ?? 0} | Завершено: ${_statistics['completedTasks'] ?? 0}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
         ],
@@ -181,7 +181,7 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: color.withOpacity(0.3), width: 2),
+        side: BorderSide(color: color.withValues(alpha: 0.3), width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,7 +190,7 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -211,7 +211,7 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
                   _getQuadrantDescription(quadrant),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: color.withOpacity(0.8),
+                    color: color.withValues(alpha: 0.8),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -241,13 +241,13 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
                         Icon(
                           Icons.inbox_outlined,
                           size: 40,
-                          color: color.withOpacity(0.5),
+                          color: color.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Нет задач',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: color.withOpacity(0.5),
+                            color: color.withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -684,7 +684,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: _selectedQuadrant,
+                initialValue: _selectedQuadrant,
                 decoration: const InputDecoration(labelText: 'Квадрант'),
                 items: const [
                   DropdownMenuItem(value: 1, child: Text('1 - Срочно и важно')),
@@ -693,8 +693,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   DropdownMenuItem(value: 4, child: Text('4 - Не срочно и не важно')),
                 ],
                 onChanged: (value) {
+                  if (value == null) return;
                   setState(() {
-                    _selectedQuadrant = value!;
+                    _selectedQuadrant = value;
                   });
                 },
               ),
