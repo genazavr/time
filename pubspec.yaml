@@ -52,6 +52,7 @@ dependencies:
   # Звук и медиа
   just_audio: ^0.9.40
   audio_session: ^0.1.21
+  image_picker: ^1.1.1
   
   # Графики и диаграммы
   fl_chart: ^0.68.0

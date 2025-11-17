@@ -82,7 +82,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -138,7 +138,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             shape: BoxShape.circle,
           ),
           todayDecoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.3),
+            color: AppTheme.primaryColor.withValues(alpha: 0.3),
             shape: BoxShape.circle,
           ),
           selectedDecoration: BoxDecoration(
@@ -279,7 +279,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${DateFormat('HH:mm').format(event.startDate)}',
+                    DateFormat('HH:mm').format(event.startDate),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.grey.shade600,
                     ),
@@ -515,7 +515,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedType,
+                initialValue: _selectedType,
                 decoration: const InputDecoration(labelText: 'Тип события'),
                 items: const [
                   DropdownMenuItem(value: 'personal', child: Text('Личное')),
@@ -525,8 +525,9 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   DropdownMenuItem(value: 'reminder', child: Text('Напоминание')),
                 ],
                 onChanged: (value) {
+                  if (value == null) return;
                   setState(() {
-                    _selectedType = value!;
+                    _selectedType = value;
                   });
                 },
               ),

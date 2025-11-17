@@ -1,5 +1,16 @@
+import 'dart:io';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+
+import '../../models/user_metrics.dart';
+import '../../services/firebase_service.dart';
+import '../../services/local_avatar_service.dart';
+import '../../services/user_metrics_service.dart';
+import '../../theme/app_theme.dart';
+import '../../utils/achievement_utils.dart';
 import '../calendar/calendar_screen.dart';
 import '../pomodoro/pomodoro_screen.dart';
 import '../eisenhower/eisenhower_screen.dart';
@@ -8,7 +19,6 @@ import '../notes/notes_screen.dart';
 import '../schedule/schedule_screen.dart';
 import '../podcasts/podcasts_screen.dart';
 import '../profile/profile_screen.dart';
-import '../../theme/app_theme.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -157,11 +167,43 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   }
 }
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final FirebaseService _firebaseService = FirebaseService();
+  final UserMetricsService _metricsService = UserMetricsService();
+  final LocalAvatarService _avatarService = LocalAvatarService();
+
+  String? _userName;
+
+  @override
+  void initState() {
+    super.initState();
+    _avatarService.loadAvatar();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final user = _firebaseService.getCurrentUser();
+    if (user == null) return;
+    final data = await _firebaseService.getUserData(user.uid);
+    if (!mounted) return;
+    setState(() {
+      _userName = (data?['name'] as String?)?.trim();
+      if (_userName != null && _userName!.isEmpty) {
+        _userName = null;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final user = _firebaseService.getCurrentUser();
     return Scaffold(
       appBar: AppBar(
         title: const Text('BLISS'),
@@ -171,37 +213,91 @@ class DashboardScreen extends StatelessWidget {
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {},
           ),
+          ValueListenableBuilder<String?>(
+            valueListenable: _avatarService.avatarNotifier,
+            builder: (context, path, _) {
+              final image = _resolveAvatar(path);
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.white.withValues(alpha: 0.15),
+                  backgroundImage: image,
+                  child: image == null
+                      ? const Icon(Icons.person_outline, color: Colors.white)
+                      : null,
+                ),
+              );
+            },
+          ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: AnimationLimiter(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: AnimationConfiguration.toStaggeredList(
-              duration: const Duration(milliseconds: 375),
-              childAnimationBuilder: (widget) => ScaleAnimation(
-                child: FadeInAnimation(
-                  child: widget,
+      body: StreamBuilder<UserMetrics>(
+        stream: _metricsService.watchMetrics(),
+        initialData: UserMetrics.empty,
+        builder: (context, snapshot) {
+          final metrics = snapshot.data ?? UserMetrics.empty;
+          final achievements = buildUserAchievements(metrics);
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: AnimationLimiter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: AnimationConfiguration.toStaggeredList(
+                  duration: const Duration(milliseconds: 375),
+                  childAnimationBuilder: (widget) => ScaleAnimation(
+                    child: FadeInAnimation(child: widget),
+                  ),
+                  children: [
+                    _buildWelcomeCard(context, user, metrics, achievements.length),
+                    const SizedBox(height: 24),
+                    _buildQuickActions(context),
+                    const SizedBox(height: 24),
+                    _buildTodayOverview(context, metrics),
+                    const SizedBox(height: 24),
+                    _buildProgressSection(context, metrics),
+                  ],
                 ),
               ),
-              children: [
-                _buildWelcomeCard(context),
-                const SizedBox(height: 24),
-                _buildQuickActions(context),
-                const SizedBox(height: 24),
-                _buildTodayOverview(context),
-                const SizedBox(height: 24),
-                _buildProgressSection(context),
-              ],
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context) {
+  ImageProvider? _resolveAvatar(String? path) {
+    if (path == null || path.isEmpty || kIsWeb) {
+      return null;
+    }
+    final file = File(path);
+    if (!file.existsSync()) {
+      return null;
+    }
+    return FileImage(file);
+  }
+
+  String _greetingName(User? user) {
+    if (_userName != null && _userName!.isNotEmpty) {
+      return _userName!;
+    }
+    final displayName = user?.displayName;
+    if (displayName != null && displayName.trim().isNotEmpty) {
+      return displayName.trim();
+    }
+    final email = user?.email;
+    if (email == null || email.isEmpty) {
+      return 'Пользователь';
+    }
+    return email.split('@').first;
+  }
+
+  Widget _buildWelcomeCard(
+    BuildContext context,
+    User? user,
+    UserMetrics metrics,
+    int achievementsCount,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -214,7 +310,7 @@ class DashboardScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.3),
+            color: AppTheme.primaryColor.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -223,19 +319,119 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Добро пожаловать в BLISS!',
-            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ValueListenableBuilder<String?>(
+                valueListenable: _avatarService.avatarNotifier,
+                builder: (context, path, _) {
+                  final image = _resolveAvatar(path);
+                  return CircleAvatar(
+                    radius: 38,
+                    backgroundColor: Colors.white,
+                    backgroundImage: image,
+                    child: image == null
+                        ? Icon(
+                            Icons.person,
+                            size: 40,
+                            color: AppTheme.primaryColor,
+                          )
+                        : null,
+                  );
+                },
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Привет, ${_greetingName(user)}',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Сфокусируйся на важном сегодня',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Balance • Learning • Inspiring • Serenity • Success',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withOpacity(0.9),
-            ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _buildHighlight(
+                context,
+                title: 'Задачи',
+                value: metrics.totalTasks > 0
+                    ? '${metrics.completedTasks}/${metrics.totalTasks}'
+                    : '0',
+                icon: Icons.task_alt,
+              ),
+              _buildHighlight(
+                context,
+                title: 'Фокус',
+                value: '${metrics.focusMinutesToday} мин',
+                icon: Icons.timer_outlined,
+              ),
+              _buildHighlight(
+                context,
+                title: 'Достижения',
+                value: achievementsCount.toString(),
+                icon: Icons.emoji_events_outlined,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHighlight(
+    BuildContext context, {
+    required String title,
+    required String value,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 20),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
           ),
         ],
       ),
@@ -243,68 +439,83 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildQuickActions(BuildContext context) {
+    final actions = [
+      _QuickAction(
+        icon: Icons.timer_outlined,
+        title: 'Начать Помодоро',
+        color: AppTheme.primaryColor,
+        onTap: () {},
+      ),
+      _QuickAction(
+        icon: Icons.add_task,
+        title: 'Добавить задачу',
+        color: AppTheme.accentColor,
+        onTap: () {},
+      ),
+      _QuickAction(
+        icon: Icons.event_outlined,
+        title: 'Новое событие',
+        color: AppTheme.warningColor,
+        onTap: () {},
+      ),
+      _QuickAction(
+        icon: Icons.note_add_outlined,
+        title: 'Создать заметку',
+        color: AppTheme.secondaryColor,
+        onTap: () {},
+      ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Быстрые действия',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+                fontWeight: FontWeight.w700,
+              ),
         ),
         const SizedBox(height: 16),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childAspectRatio: 1.2,
-          children: [
-            _buildActionCard(
-              context,
-              Icons.timer,
-              'Начать Помодоро',
-              AppTheme.primaryColor,
-              () {},
-            ),
-            _buildActionCard(
-              context,
-              Icons.add_task,
-              'Добавить задачу',
-              AppTheme.accentColor,
-              () {},
-            ),
-            _buildActionCard(
-              context,
-              Icons.event,
-              'Новое событие',
-              AppTheme.warningColor,
-              () {},
-            ),
-            _buildActionCard(
-              context,
-              Icons.note_add,
-              'Создать заметку',
-              AppTheme.secondaryColor,
-              () {},
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final crossAxisCount = width >= 900
+                ? 4
+                : width >= 600
+                    ? 3
+                    : width >= 360
+                        ? 2
+                        : 1;
+            final childAspectRatio = width >= 900
+                ? 1.5
+                : width >= 600
+                    ? 1.3
+                    : width >= 360
+                        ? 1.0
+                        : 1.4;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: childAspectRatio,
+              ),
+              itemCount: actions.length,
+              itemBuilder: (context, index) =>
+                  _buildActionCard(context, actions[index]),
+            );
+          },
         ),
       ],
     );
   }
 
-  Widget _buildActionCard(
-    BuildContext context,
-    IconData icon,
-    String title,
-    Color color,
-    VoidCallback onTap,
-  ) {
+  Widget _buildActionCard(BuildContext context, _QuickAction action) {
     return Card(
       child: InkWell(
-        onTap: onTap,
+        onTap: action.onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -314,21 +525,21 @@ class DashboardScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: action.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  icon,
-                  color: color,
+                  action.icon,
+                  color: action.color,
                   size: 28,
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                title,
+                action.title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -338,15 +549,26 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTodayOverview(BuildContext context) {
+  Widget _buildTodayOverview(BuildContext context, UserMetrics metrics) {
+    final pendingHomework = metrics.totalHomework > metrics.completedHomework
+        ? metrics.totalHomework - metrics.completedHomework
+        : 0;
+
+    final items = [
+      _OverviewItem('Задачи на сегодня', metrics.tasksDueToday, AppTheme.primaryColor),
+      _OverviewItem('Домашние задания', pendingHomework, AppTheme.warningColor),
+      _OverviewItem('События', metrics.eventsToday, AppTheme.accentColor),
+      _OverviewItem('Помодоро сессии', metrics.pomodoroSessionsToday, AppTheme.secondaryColor),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Обзор дня',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+                fontWeight: FontWeight.w700,
+              ),
         ),
         const SizedBox(height: 16),
         Card(
@@ -354,13 +576,10 @@ class DashboardScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                _buildOverviewItem(context, 'Задачи на сегодня', '8', AppTheme.primaryColor),
-                const Divider(),
-                _buildOverviewItem(context, 'Домашние задания', '3', AppTheme.warningColor),
-                const Divider(),
-                _buildOverviewItem(context, 'События', '2', AppTheme.accentColor),
-                const Divider(),
-                _buildOverviewItem(context, 'Помодоро сессии', '4', AppTheme.secondaryColor),
+                for (var i = 0; i < items.length; i++) ...[
+                  _buildOverviewItem(context, items[i]),
+                  if (i != items.length - 1) const Divider(),
+                ],
               ],
             ),
           ),
@@ -369,28 +588,28 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOverviewItem(BuildContext context, String label, String value, Color color) {
+  Widget _buildOverviewItem(BuildContext context, _OverviewItem item) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            label,
+            item.label,
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: item.color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              value,
+              item.value.toString(),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w700,
-              ),
+                    color: item.color,
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
           ),
         ],
@@ -398,15 +617,15 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressSection(BuildContext context) {
+  Widget _buildProgressSection(BuildContext context, UserMetrics metrics) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Прогресс на этой неделе',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+                fontWeight: FontWeight.w700,
+              ),
         ),
         const SizedBox(height: 16),
         Card(
@@ -414,11 +633,33 @@ class DashboardScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                _buildProgressBar(context, 'Завершено задач', 0.75, AppTheme.accentColor),
+                _buildProgressBar(
+                  context,
+                  label: 'Завершено задач',
+                  progress: metrics.tasksCompletionRatio,
+                  color: AppTheme.accentColor,
+                  detail: metrics.totalTasks > 0
+                      ? '${metrics.completedTasks}/${metrics.totalTasks}'
+                      : 'Нет задач',
+                ),
                 const SizedBox(height: 16),
-                _buildProgressBar(context, 'Фокус время', 0.6, AppTheme.primaryColor),
+                _buildProgressBar(
+                  context,
+                  label: 'Фокус время',
+                  progress: metrics.focusDayProgress,
+                  color: AppTheme.primaryColor,
+                  detail: '${metrics.focusMinutesToday} мин из 150',
+                ),
                 const SizedBox(height: 16),
-                _buildProgressBar(context, 'Цели по ДЗ', 0.9, AppTheme.warningColor),
+                _buildProgressBar(
+                  context,
+                  label: 'Цели по ДЗ',
+                  progress: metrics.homeworkCompletionRatio,
+                  color: AppTheme.warningColor,
+                  detail: metrics.totalHomework > 0
+                      ? '${metrics.completedHomework}/${metrics.totalHomework}'
+                      : 'Нет ДЗ',
+                ),
               ],
             ),
           ),
@@ -427,23 +668,46 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressBar(BuildContext context, String label, double progress, Color color) {
+  Widget _buildProgressBar(
+    BuildContext context, {
+    required String label,
+    required double progress,
+    required Color color,
+    String? detail,
+  }) {
+    final progressValue = progress.clamp(0.0, 1.0);
+    final percent = (progressValue * 100).round();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  if (detail != null)
+                    Text(
+                      detail,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
+                    ),
+                ],
+              ),
             ),
             Text(
-              '${(progress * 100).toInt()}%',
+              '$percent%',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
           ],
         ),
@@ -451,12 +715,12 @@ class DashboardScreen extends StatelessWidget {
         Container(
           height: 8,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(4),
           ),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
-            widthFactor: progress,
+            widthFactor: progressValue,
             child: Container(
               decoration: BoxDecoration(
                 color: color,
@@ -469,3 +733,26 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 }
+
+class _QuickAction {
+  final IconData icon;
+  final String title;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickAction({
+    required this.icon,
+    required this.title,
+    required this.color,
+    required this.onTap,
+  });
+}
+
+class _OverviewItem {
+  final String label;
+  final int value;
+  final Color color;
+
+  const _OverviewItem(this.label, this.value, this.color);
+}
+
