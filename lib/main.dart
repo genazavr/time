@@ -1,5 +1,9 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'services/firebase_service.dart';
+import 'services/notification_center_service.dart';
 import 'services/notification_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/registration_screen.dart';
@@ -41,7 +45,10 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  final _firebaseService = FirebaseService();
+  final FirebaseService _firebaseService = FirebaseService();
+  final NotificationCenterService _notificationCenter = NotificationCenterService();
+  StreamSubscription<User?>? _authSubscription;
+
   bool _isAuthenticated = false;
   bool _showRegistration = false;
   bool _isInitializing = true;
@@ -49,15 +56,38 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    _checkAuthStatus();
+    final currentUser = _firebaseService.getCurrentUser();
+    if (currentUser != null) {
+      _isAuthenticated = true;
+      _isInitializing = false;
+      unawaited(_notificationCenter.start(currentUser.uid));
+    } else {
+      _isInitializing = false;
+    }
+
+    _authSubscription = _firebaseService.auth.authStateChanges().listen((user) {
+      if (user != null) {
+        unawaited(_notificationCenter.start(user.uid));
+      } else {
+        unawaited(_notificationCenter.stop());
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _isAuthenticated = user != null;
+        if (user == null) {
+          _showRegistration = false;
+        }
+      });
+    });
   }
 
-  void _checkAuthStatus() {
-    final user = _firebaseService.getCurrentUser();
-    setState(() {
-      _isAuthenticated = user != null;
-      _isInitializing = false;
-    });
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    unawaited(_notificationCenter.stop());
+    super.dispose();
   }
 
   void _handleRegistrationComplete(bool success) {
