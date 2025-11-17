@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import '../../models/schedule.dart';
 import '../../services/schedule_service.dart';
 import '../../theme/app_theme.dart';
@@ -16,11 +17,26 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   final ScheduleService _scheduleService = ScheduleService();
   List<Schedule> _schedules = [];
   DateTime _selectedDay = DateTime.now();
+  bool _localeInitialized = false;
 
   @override
   void initState() {
     super.initState();
+    _initLocale();
     _loadSchedules();
+  }
+
+  Future<void> _initLocale() async {
+    try {
+      await initializeDateFormatting('ru_RU');
+    } catch (_) {
+      await initializeDateFormatting();
+    }
+    if (mounted) {
+      setState(() {
+        _localeInitialized = true;
+      });
+    }
   }
 
   void _loadSchedules() {
@@ -69,6 +85,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildDateSelector() {
+    final rawDate = _localeInitialized
+        ? DateFormat('EEEE, d MMMM y', 'ru_RU').format(_selectedDay)
+        : DateFormat('EEEE, d MMMM y').format(_selectedDay);
+
+    String displayDate;
+    if (_localeInitialized) {
+      displayDate = toBeginningOfSentenceCase(rawDate, 'ru_RU')!;
+    } else {
+      displayDate = rawDate;
+    }
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -88,7 +115,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           ),
           Expanded(
             child: Text(
-              DateFormat('EEEE, d MMMM y', 'ru_RU').format(_selectedDay),
+              displayDate,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,

@@ -35,11 +35,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   final List<Widget> _pages = [
     const DashboardScreen(),
-    const CalendarScreen(),
-    const PomodoroScreen(),
     const EisenhowerScreen(),
     const HomeworkScreen(),
-    const NotesScreen(),
     const ScheduleScreen(),
     const PodcastsScreen(),
     const ProfileScreen(),
@@ -110,14 +107,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(Icons.dashboard_outlined, 'Главная', 0),
-                _buildNavItem(Icons.calendar_today_outlined, 'Календарь', 1),
-                _buildNavItem(Icons.timer_outlined, 'Помодоро', 2),
-                _buildNavItem(Icons.grid_view_outlined, 'Эйзенхауэр', 3),
-                _buildNavItem(Icons.assignment_outlined, 'ДЗ', 4),
-                _buildNavItem(Icons.note_outlined, 'Заметки', 5),
-                _buildNavItem(Icons.schedule, 'Расписание', 6),
-                _buildNavItem(Icons.headphones_outlined, 'Подкасты', 7),
-                _buildNavItem(Icons.person_outline, 'Профиль', 8),
+                _buildNavItem(Icons.grid_view_outlined, 'Эйзенхауэр', 1),
+                _buildNavItem(Icons.assignment_outlined, 'ДЗ', 2),
+                _buildNavItem(Icons.schedule, 'Расписание', 3),
+                _buildNavItem(Icons.headphones_outlined, 'Подкасты', 4),
+                _buildNavItem(Icons.person_outline, 'Профиль', 5),
               ],
             ),
           ),
@@ -442,27 +436,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final actions = [
       _QuickAction(
         icon: Icons.timer_outlined,
-        title: 'Начать Помодоро',
+        title: 'Помодоро',
         color: AppTheme.primaryColor,
-        onTap: () {},
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PomodoroScreen()),
+          );
+        },
       ),
       _QuickAction(
-        icon: Icons.add_task,
-        title: 'Добавить задачу',
+        icon: Icons.calendar_today_outlined,
+        title: 'Календарь',
         color: AppTheme.accentColor,
-        onTap: () {},
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CalendarScreen()),
+          );
+        },
       ),
       _QuickAction(
-        icon: Icons.event_outlined,
-        title: 'Новое событие',
-        color: AppTheme.warningColor,
-        onTap: () {},
-      ),
-      _QuickAction(
-        icon: Icons.note_add_outlined,
-        title: 'Создать заметку',
+        icon: Icons.note_outlined,
+        title: 'Заметки',
         color: AppTheme.secondaryColor,
-        onTap: () {},
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const NotesScreen()),
+          );
+        },
       ),
     ];
 
@@ -479,32 +482,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final crossAxisCount = width >= 900
-                ? 4
-                : width >= 600
-                    ? 3
-                    : width >= 360
-                        ? 2
-                        : 1;
-            final childAspectRatio = width >= 900
-                ? 1.5
-                : width >= 600
-                    ? 1.3
-                    : width >= 360
-                        ? 1.0
-                        : 1.4;
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: childAspectRatio,
+            const spacing = 16.0;
+            double buttonWidth;
+            if (width >= 840) {
+              buttonWidth = (width - spacing * 2) / 3;
+            } else if (width >= 360) {
+              buttonWidth = (width - spacing) / 2;
+            } else {
+              buttonWidth = width;
+            }
+            buttonWidth = buttonWidth.clamp(0.0, 320.0);
+            return Center(
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: spacing,
+                runSpacing: spacing,
+                children: actions.map((action) {
+                  final currentWidth = width < 360 ? width : buttonWidth;
+                  return SizedBox(
+                    width: currentWidth,
+                    child: _buildActionCard(context, action),
+                  );
+                }).toList(),
               ),
-              itemCount: actions.length,
-              itemBuilder: (context, index) =>
-                  _buildActionCard(context, actions[index]),
             );
           },
         ),
