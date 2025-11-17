@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'dashboard_screen.dart';
 import '../calendar/calendar_screen.dart';
 import '../pomodoro/pomodoro_screen.dart';
 import '../eisenhower/eisenhower_screen.dart';

@@ -420,9 +420,9 @@ class _HomeworkScreenState extends State<HomeworkScreen> with TickerProviderStat
                 const SizedBox(height: 8),
                 Text('Учитель: ${homework.teacherName}'),
               ],
-              if (homework.isCompleted) ...[
+              if (homework.isCompleted && homework.completedAt != null) ...[
                 const SizedBox(height: 8),
-                Text('Выполнено: ${DateFormat('dd.MM.yyyy HH:mm').format(homework.completedAt)}'),
+                Text('Выполнено: ${DateFormat('dd.MM.yyyy HH:mm').format(homework.completedAt!)}'),
               ],
             ],
           ),
