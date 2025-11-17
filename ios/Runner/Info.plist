@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Разрешите доступ к фотографиям, чтобы выбрать аватар.</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>Мы отправляем напоминания о задачах, расписании и важных событиях.</string>
 </dict>
 </plist>
