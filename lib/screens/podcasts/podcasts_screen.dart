@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:just_audio/just_audio.dart';
 import '../../models/podcast.dart';
 import '../../services/podcast_service.dart';
 import '../../theme/app_theme.dart';
@@ -115,14 +117,14 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Нет подкастов',
+            'Нет треков',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Colors.grey.shade600,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Нажмите + чтобы добавить подкаст',
+            'Нажмите + чтобы добавить трек',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey.shade500,
             ),
@@ -153,6 +155,8 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
   }
 
   Widget _buildPodcastCard(Podcast podcast) {
+    IconData podcastIcon = _getIconData(podcast.iconName ?? 'headphones');
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
@@ -169,20 +173,12 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  image: podcast.imageUrl != null
-                      ? DecorationImage(
-                          image: NetworkImage(podcast.imageUrl!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
                 ),
-                child: podcast.imageUrl == null
-                    ? Icon(
-                        Icons.headphones,
-                        size: 32,
-                        color: AppTheme.primaryColor,
-                      )
-                    : null,
+                child: Icon(
+                  podcastIcon,
+                  size: 32,
+                  color: AppTheme.primaryColor,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -295,10 +291,8 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (podcast.imageUrl != null) ...[
-                Image.network(podcast.imageUrl!),
-                const SizedBox(height: 16),
-              ],
+              Icon(_getIconData(podcast.iconName ?? 'headphones'), size: 64, color: AppTheme.primaryColor),
+              const SizedBox(height: 16),
               Text('Автор: ${podcast.author}'),
               const SizedBox(height: 8),
               Text('Категория: ${podcast.category}'),
@@ -307,9 +301,14 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
               const SizedBox(height: 8),
               Text('Прослушиваний: ${podcast.playCount}'),
               const SizedBox(height: 8),
-              Text('Рейтинг: ${podcast.rating.toStringAsFixed(1)}'),
-              const SizedBox(height: 16),
-              Text(podcast.description),
+              if (podcast.localAudioPath != null) ...[
+                Text('Файл: ${podcast.localAudioPath!.split('/').last}'),
+                const SizedBox(height: 8),
+              ],
+              if (podcast.description.isNotEmpty) ...[
+                const Divider(),
+                Text(podcast.description),
+              ],
             ],
           ),
         ),
@@ -395,19 +394,26 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Избранные подкасты'),
+        title: const Text('Избранные треки'),
         content: SizedBox(
           width: double.maxFinite,
           height: 400,
           child: favorites.isEmpty
-              ? const Center(child: Text('Нет избранных подкастов'))
+              ? const Center(child: Text('Нет избранных треков'))
               : ListView.builder(
                   itemCount: favorites.length,
                   itemBuilder: (context, index) {
                     final podcast = favorites[index];
                     return ListTile(
+                      leading: Icon(_getIconData(podcast.iconName ?? 'headphones')),
                       title: Text(podcast.title),
                       subtitle: Text(podcast.author),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.favorite, color: Colors.red),
+                        onPressed: () {
+                          _toggleFavorite(podcast);
+                        },
+                      ),
                       onTap: () {
                         Navigator.pop(context);
                         _playPodcast(podcast);
@@ -441,8 +447,8 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Удалить подкаст?'),
-        content: const Text('Вы уверены, что хотите удалить этот подкаст?'),
+        title: const Text('Удалить трек?'),
+        content: const Text('Вы уверены, что хотите удалить этот трек?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -458,6 +464,22 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
         ],
       ),
     );
+  }
+
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'music_note': return Icons.music_note;
+      case 'album': return Icons.album;
+      case 'library_music': return Icons.library_music;
+      case 'audiotrack': return Icons.audiotrack;
+      case 'mic': return Icons.mic;
+      case 'radio': return Icons.radio;
+      case 'podcast': return Icons.podcasts;
+      case 'speaker': return Icons.speaker;
+      case 'equalizer': return Icons.equalizer;
+      case 'queue_music': return Icons.queue_music;
+      default: return Icons.headphones;
+    }
   }
 }
 
@@ -481,11 +503,13 @@ class _AddPodcastDialogState extends State<AddPodcastDialog> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _authorController;
-  late TextEditingController _audioUrlController;
-  late TextEditingController _imageUrlController;
   late String _selectedCategory;
-  late int _durationMinutes;
-  late int _durationSeconds;
+  late String _selectedIcon;
+  late bool _isFavorite;
+  String? _localAudioPath;
+  String? _audioFileName;
+  Duration? _audioDuration;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -494,11 +518,14 @@ class _AddPodcastDialogState extends State<AddPodcastDialog> {
     _titleController = TextEditingController(text: podcast?.title ?? '');
     _descriptionController = TextEditingController(text: podcast?.description ?? '');
     _authorController = TextEditingController(text: podcast?.author ?? '');
-    _audioUrlController = TextEditingController(text: podcast?.audioUrl ?? '');
-    _imageUrlController = TextEditingController(text: podcast?.imageUrl ?? '');
-    _selectedCategory = podcast?.category ?? (widget.categories.isNotEmpty ? widget.categories.first : 'Образование');
-    _durationMinutes = podcast?.duration.inMinutes ?? 30;
-    _durationSeconds = (podcast?.duration.inSeconds ?? 0) % 60;
+    _selectedCategory = podcast?.category ?? (widget.categories.isNotEmpty ? widget.categories.first : 'Музыка');
+    _selectedIcon = podcast?.iconName ?? 'headphones';
+    _isFavorite = podcast?.isFavorite ?? false;
+    _localAudioPath = podcast?.localAudioPath;
+    _audioDuration = podcast?.duration;
+    if (_localAudioPath != null) {
+      _audioFileName = _localAudioPath!.split('/').last;
+    }
   }
 
   @override
@@ -506,34 +533,170 @@ class _AddPodcastDialogState extends State<AddPodcastDialog> {
     _titleController.dispose();
     _descriptionController.dispose();
     _authorController.dispose();
-    _audioUrlController.dispose();
-    _imageUrlController.dispose();
+    _audioPlayer.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAudioFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final path = result.files.single.path!;
+        setState(() {
+          _localAudioPath = path;
+          _audioFileName = result.files.single.name;
+        });
+
+        await _audioPlayer.setFilePath(path);
+        final duration = _audioPlayer.duration;
+        if (duration != null) {
+          setState(() {
+            _audioDuration = duration;
+          });
+        }
+
+        if (_titleController.text.isEmpty) {
+          setState(() {
+            _titleController.text = result.files.single.name.replaceAll(RegExp(r'\.[^.]+$'), '');
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка при выборе файла: $e')),
+        );
+      }
+    }
+  }
+
+  void _showIconPicker() {
+    final icons = {
+      'headphones': Icons.headphones,
+      'music_note': Icons.music_note,
+      'album': Icons.album,
+      'library_music': Icons.library_music,
+      'audiotrack': Icons.audiotrack,
+      'mic': Icons.mic,
+      'radio': Icons.radio,
+      'podcast': Icons.podcasts,
+      'speaker': Icons.speaker,
+      'equalizer': Icons.equalizer,
+      'queue_music': Icons.queue_music,
+    };
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Выберите иконку'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: icons.length,
+            itemBuilder: (context, index) {
+              final entry = icons.entries.elementAt(index);
+              final isSelected = _selectedIcon == entry.key;
+              return InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedIcon = entry.key;
+                  });
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected 
+                        ? AppTheme.primaryColor.withValues(alpha: 0.2) 
+                        : Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: isSelected 
+                        ? Border.all(color: AppTheme.primaryColor, width: 2) 
+                        : null,
+                  ),
+                  child: Icon(
+                    entry.value,
+                    size: 32,
+                    color: isSelected ? AppTheme.primaryColor : Colors.grey,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Закрыть'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final iconData = _getIconData(_selectedIcon);
+    
     return AlertDialog(
-      title: Text(widget.existingPodcast == null ? 'Добавить подкаст' : 'Редактировать подкаст'),
+      title: Text(widget.existingPodcast == null ? 'Добавить трек' : 'Редактировать трек'),
       content: SizedBox(
         width: double.maxFinite,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              ElevatedButton.icon(
+                onPressed: _pickAudioFile,
+                icon: const Icon(Icons.audio_file),
+                label: Text(_audioFileName ?? 'Выбрать аудио файл'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+              ),
+              if (_audioFileName != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Файл: $_audioFileName',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (_audioDuration != null)
+                  Text(
+                    'Длительность: ${_audioDuration!.inMinutes}:${(_audioDuration!.inSeconds % 60).toString().padLeft(2, '0')}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+              ],
+              const SizedBox(height: 16),
               TextField(
                 controller: _titleController,
                 decoration: const InputDecoration(
-                  labelText: 'Название',
-                  hintText: 'Введите название подкаста',
+                  labelText: 'Название трека',
+                  hintText: 'Введите название',
+                  prefixIcon: Icon(Icons.title),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _authorController,
                 decoration: const InputDecoration(
-                  labelText: 'Автор',
-                  hintText: 'Введите имя автора',
+                  labelText: 'Исполнитель',
+                  hintText: 'Введите имя исполнителя',
+                  prefixIcon: Icon(Icons.person),
                 ),
               ),
               const SizedBox(height: 16),
@@ -541,17 +704,27 @@ class _AddPodcastDialogState extends State<AddPodcastDialog> {
                 controller: _descriptionController,
                 decoration: const InputDecoration(
                   labelText: 'Описание',
-                  hintText: 'Введите описание подкаста',
+                  hintText: 'Введите описание',
+                  prefixIcon: Icon(Icons.description),
                 ),
-                maxLines: 3,
+                maxLines: 2,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _selectedCategory,
-                decoration: const InputDecoration(labelText: 'Категория'),
-                items: widget.categories.map((category) {
-                  return DropdownMenuItem(value: category, child: Text(category));
-                }).toList(),
+                decoration: const InputDecoration(
+                  labelText: 'Категория',
+                  prefixIcon: Icon(Icons.category),
+                ),
+                items: widget.categories.isNotEmpty
+                    ? widget.categories.map((category) {
+                        return DropdownMenuItem(value: category, child: Text(category));
+                      }).toList()
+                    : [
+                        const DropdownMenuItem(value: 'Музыка', child: Text('Музыка')),
+                        const DropdownMenuItem(value: 'Подкасты', child: Text('Подкасты')),
+                        const DropdownMenuItem(value: 'Образование', child: Text('Образование')),
+                      ],
                 onChanged: (value) {
                   setState(() {
                     _selectedCategory = value!;
@@ -559,52 +732,41 @@ class _AddPodcastDialogState extends State<AddPodcastDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _audioUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'URL аудио',
-                  hintText: 'Введите URL аудиофайла',
+              InkWell(
+                onTap: _showIconPicker,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(iconData, color: AppTheme.primaryColor, size: 32),
+                      const SizedBox(width: 16),
+                      Text(
+                        'Выбрать иконку',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.arrow_forward_ios, size: 16),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _imageUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'URL изображения',
-                  hintText: 'Введите URL изображения (необязательно)',
+              SwitchListTile(
+                value: _isFavorite,
+                onChanged: (value) {
+                  setState(() {
+                    _isFavorite = value;
+                  });
+                },
+                title: const Text('Избранный трек'),
+                secondary: Icon(
+                  _isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: _isFavorite ? Colors.red : Colors.grey,
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Минуты',
-                        hintText: '0',
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        _durationMinutes = int.tryParse(value) ?? 0;
-                      },
-                      controller: TextEditingController(text: _durationMinutes.toString()),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Секунды',
-                        hintText: '0',
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        _durationSeconds = int.tryParse(value) ?? 0;
-                      },
-                      controller: TextEditingController(text: _durationSeconds.toString()),
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
@@ -623,47 +785,60 @@ class _AddPodcastDialogState extends State<AddPodcastDialog> {
     );
   }
 
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'music_note': return Icons.music_note;
+      case 'album': return Icons.album;
+      case 'library_music': return Icons.library_music;
+      case 'audiotrack': return Icons.audiotrack;
+      case 'mic': return Icons.mic;
+      case 'radio': return Icons.radio;
+      case 'podcast': return Icons.podcasts;
+      case 'speaker': return Icons.speaker;
+      case 'equalizer': return Icons.equalizer;
+      case 'queue_music': return Icons.queue_music;
+      default: return Icons.headphones;
+    }
+  }
+
   void _savePodcast() {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Введите название подкаста')),
+        const SnackBar(content: Text('Введите название трека')),
       );
       return;
     }
 
     if (_authorController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Введите имя автора')),
+        const SnackBar(content: Text('Введите имя исполнителя')),
       );
       return;
     }
 
-    if (_audioUrlController.text.trim().isEmpty) {
+    if (_localAudioPath == null && widget.existingPodcast == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Введите URL аудиофайла')),
+        const SnackBar(content: Text('Выберите аудио файл')),
       );
       return;
     }
-
-    final duration = Duration(minutes: _durationMinutes, seconds: _durationSeconds);
 
     final podcast = Podcast(
       id: widget.existingPodcast?.id ?? '',
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim().isEmpty 
-          ? 'Без описания' 
+          ? '' 
           : _descriptionController.text.trim(),
-      author: _authorController.text.trim().isEmpty ? 'Неизвестный автор' : _authorController.text.trim(),
-      audioUrl: _audioUrlController.text.trim(),
-      imageUrl: _imageUrlController.text.trim().isEmpty 
-          ? null 
-          : _imageUrlController.text.trim(),
-      duration: duration,
+      author: _authorController.text.trim(),
+      audioUrl: _localAudioPath ?? widget.existingPodcast?.audioUrl ?? '',
+      localAudioPath: _localAudioPath ?? widget.existingPodcast?.localAudioPath,
+      iconName: _selectedIcon,
+      duration: _audioDuration ?? widget.existingPodcast?.duration ?? const Duration(seconds: 0),
       category: _selectedCategory,
       publishedAt: widget.existingPodcast?.publishedAt ?? DateTime.now(),
       createdAt: widget.existingPodcast?.createdAt ?? DateTime.now(),
       playCount: widget.existingPodcast?.playCount ?? 0,
-      isFavorite: widget.existingPodcast?.isFavorite ?? false,
+      isFavorite: _isFavorite,
       rating: widget.existingPodcast?.rating ?? 0.0,
     );
 

@@ -5,6 +5,8 @@ class Podcast {
   final String author;
   final String audioUrl;
   final String? imageUrl;
+  final String? localAudioPath;
+  final String? iconName;
   final Duration duration;
   final String category;
   final List<String> tags;
@@ -21,6 +23,8 @@ class Podcast {
     required this.author,
     required this.audioUrl,
     this.imageUrl,
+    this.localAudioPath,
+    this.iconName,
     required this.duration,
     required this.category,
     this.tags = const [],
@@ -39,6 +43,8 @@ class Podcast {
       author: map['author'] ?? '',
       audioUrl: map['audioUrl'] ?? '',
       imageUrl: map['imageUrl'],
+      localAudioPath: map['localAudioPath'],
+      iconName: map['iconName'],
       duration: Duration(seconds: map['durationSeconds'] ?? 0),
       category: map['category'] ?? 'Образование',
       tags: List<String>.from(map['tags'] ?? []),
@@ -57,6 +63,8 @@ class Podcast {
       'author': author,
       'audioUrl': audioUrl,
       'imageUrl': imageUrl,
+      'localAudioPath': localAudioPath,
+      'iconName': iconName,
       'durationSeconds': duration.inSeconds,
       'category': category,
       'tags': tags,
@@ -75,6 +83,8 @@ class Podcast {
     String? author,
     String? audioUrl,
     String? imageUrl,
+    String? localAudioPath,
+    String? iconName,
     Duration? duration,
     String? category,
     List<String>? tags,
@@ -91,6 +101,8 @@ class Podcast {
       author: author ?? this.author,
       audioUrl: audioUrl ?? this.audioUrl,
       imageUrl: imageUrl ?? this.imageUrl,
+      localAudioPath: localAudioPath ?? this.localAudioPath,
+      iconName: iconName ?? this.iconName,
       duration: duration ?? this.duration,
       category: category ?? this.category,
       tags: tags ?? this.tags,
