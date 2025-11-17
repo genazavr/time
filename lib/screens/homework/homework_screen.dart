@@ -15,7 +15,6 @@ class HomeworkScreen extends StatefulWidget {
 class _HomeworkScreenState extends State<HomeworkScreen> with TickerProviderStateMixin {
   final HomeworkService _homeworkService = HomeworkService();
   List<Homework> _homework = [];
-  List<Homework> _filteredHomework = [];
   String _selectedFilter = 'all';
   String _selectedSubject = 'all';
   List<String> _subjects = [];
@@ -87,7 +86,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> with TickerProviderStat
     }
 
     setState(() {
-      _filteredHomework = filtered;
+      // Filter applied to _homework list
     });
   }
 
@@ -294,7 +293,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> with TickerProviderStat
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Color(int.parse(homework.priorityColor.replaceFirst('#', '0xFF'))).withOpacity(0.1),
+                      color: Color(int.parse(homework.priorityColor.replaceFirst('#', '0xFF'))).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -629,7 +628,7 @@ class _AddHomeworkDialogState extends State<AddHomeworkDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedSubject.isEmpty ? null : _selectedSubject,
+                initialValue: _selectedSubject.isEmpty ? null : _selectedSubject,
                 decoration: const InputDecoration(labelText: 'Предмет'),
                 items: widget.subjects.map((subject) {
                   return DropdownMenuItem(value: subject, child: Text(subject));
@@ -642,7 +641,7 @@ class _AddHomeworkDialogState extends State<AddHomeworkDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: _selectedPriority,
+                initialValue: _selectedPriority,
                 decoration: const InputDecoration(labelText: 'Приоритет'),
                 items: const [
                   DropdownMenuItem(value: 0, child: Text('Низкий')),

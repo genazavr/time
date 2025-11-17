@@ -81,12 +81,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
   }
 
-  void _handleLogout() {
-    setState(() {
-      _isAuthenticated = false;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isInitializing) {
