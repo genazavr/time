@@ -107,14 +107,12 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
   void _startTimer() async {
     if (_isRunning && !_isPaused) return;
     
-    if (_isPaused) {
-      setState(() {
-        _isRunning = true;
-        _isPaused = false;
-      });
-      _pulseController.repeat(reverse: true);
-      _progressController.forward();
-    } else {
+    setState(() {
+      _isRunning = true;
+      _isPaused = false;
+    });
+    
+    if (!_isPaused) {
       final session = PomodoroSession(
         id: '',
         startTime: DateTime.now(),
@@ -125,20 +123,18 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
       );
       
       await _pomodoroService.startSession(session);
-      
-      setState(() {
-        _isRunning = true;
-        _isPaused = false;
-      });
-      
-      _pulseController.repeat(reverse: true);
-      _progressController.forward(from: _progressController.value);
     }
+    
+    _pulseController.repeat(reverse: true);
+    _progressController.forward(from: _progressController.value);
     
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds > 0) {
         setState(() {
           _remainingSeconds--;
+          // Обновляем прогресс анимацию
+          final progress = 1.0 - (_remainingSeconds / _totalSeconds);
+          _progressController.value = progress;
         });
       } else {
         _completeSession();
@@ -173,6 +169,21 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
     _timer?.cancel();
     _pulseController.stop();
     _progressController.stop();
+    
+    // Завершаем сессию в Firebase
+    if (_currentType == 'work') {
+      try {
+        // Получаем последнюю сессию и отмечаем ее завершенной
+        final sessions = await _pomodoroService.getSessions().first;
+        final workSessions = sessions.where((s) => s.type == 'work' && !s.isCompleted).toList();
+        if (workSessions.isNotEmpty) {
+          final lastSession = workSessions.last;
+          await _pomodoroService.completeSession(lastSession.id, DateTime.now());
+        }
+      } catch (e) {
+        debugPrint('Error completing session: $e');
+      }
+    }
     
     if (_settings.soundEnabled) {
       await _playCompletionSound();
@@ -247,20 +258,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
             },
             child: Text(_currentType == 'work' ? 'Начать перерыв' : 'Начать работу'),
           ),
-          if (_settings.autoStartBreaks || _settings.autoStartWork)
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _switchToType(nextType);
-                if ((_currentType == 'work' && _settings.autoStartBreaks) ||
-                    (_currentType != 'work' && _settings.autoStartWork)) {
-                  Future.delayed(const Duration(milliseconds: 500), () {
-                    _startTimer();
-                  });
-                }
-              },
-              child: const Text('Автозапуск'),
-            ),
         ],
       ),
     );
@@ -321,23 +318,19 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
           ),
         ],
       ),
-      body: Column(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
           _buildStatsCards(),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildTypeSelector(),
-                const SizedBox(height: 40),
-                _buildTimer(),
-                const SizedBox(height: 40),
-                _buildControls(),
-                const SizedBox(height: 20),
-                _buildTaskInput(),
-              ],
-            ),
-          ),
+          const SizedBox(height: 20),
+          _buildTypeSelector(),
+          const SizedBox(height: 40),
+          _buildTimer(),
+          const SizedBox(height: 40),
+          _buildControls(),
+          const SizedBox(height: 20),
+          _buildTaskInput(),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -432,13 +425,16 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
   }
 
   Widget _buildTypeSelector() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildTypeButton('work', 'Работа', Icons.work),
-        _buildTypeButton('short_break', 'Короткий', Icons.coffee),
-        _buildTypeButton('long_break', 'Длинный', Icons.beach_access),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildTypeButton('work', 'Работа', Icons.work),
+          _buildTypeButton('short_break', 'Короткий', Icons.coffee),
+          _buildTypeButton('long_break', 'Длинный', Icons.beach_access),
+        ],
+      ),
     );
   }
 
@@ -502,6 +498,15 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
                     ),
                   ),
                 ),
+                if (_isRunning || _isPaused)
+                  Positioned.fill(
+                    child: CircularProgressIndicator(
+                      value: 1.0 - (_remainingSeconds / _totalSeconds),
+                      strokeWidth: 8,
+                      backgroundColor: Colors.transparent,
+                      valueColor: AlwaysStoppedAnimation<Color>(_getTypeColor()),
+                    ),
+                  ),
                 Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -620,36 +625,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
                 title: const Text('Длинный перерыв'),
                 trailing: Text('${_settings.longBreakDuration} мин'),
                 onTap: () => _showDurationDialog('longBreakDuration'),
-              ),
-              SwitchListTile(
-                title: const Text('Автозапуск перерывов'),
-                value: _settings.autoStartBreaks,
-                onChanged: (value) {
-                  setState(() {
-                    _settings = _settings.copyWith(autoStartBreaks: value);
-                  });
-                  _pomodoroService.updateSettings(_settings);
-                },
-              ),
-              SwitchListTile(
-                title: const Text('Автозапуск работы'),
-                value: _settings.autoStartWork,
-                onChanged: (value) {
-                  setState(() {
-                    _settings = _settings.copyWith(autoStartWork: value);
-                  });
-                  _pomodoroService.updateSettings(_settings);
-                },
-              ),
-              SwitchListTile(
-                title: const Text('Звуковые уведомления'),
-                value: _settings.soundEnabled,
-                onChanged: (value) {
-                  setState(() {
-                    _settings = _settings.copyWith(soundEnabled: value);
-                  });
-                  _pomodoroService.updateSettings(_settings);
-                },
               ),
             ],
           ),
