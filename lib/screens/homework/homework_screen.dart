@@ -468,7 +468,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> with TickerProviderStat
         onSave: (homework) async {
           try {
             await _homeworkService.addHomework(homework);
-            _loadStatistics();
+            await _loadStatistics();
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Домашнее задание добавлено')),
@@ -589,16 +589,18 @@ class _AddHomeworkDialogState extends State<AddHomeworkDialog> {
   late int _selectedPriority;
   late DateTime _dueDate;
   late TimeOfDay _dueTime;
+  late List<String> _availableSubjects;
 
   @override
   void initState() {
     super.initState();
     final homework = widget.existingHomework;
+    _availableSubjects = List.from(widget.subjects);
     _titleController = TextEditingController(text: homework?.title ?? '');
     _descriptionController = TextEditingController(text: homework?.description ?? '');
     _teacherController = TextEditingController(text: homework?.teacherName ?? '');
     _estimatedMinutesController = TextEditingController(text: homework?.estimatedMinutes.toString() ?? '30');
-    _selectedSubject = homework?.subject ?? (widget.subjects.isNotEmpty ? widget.subjects.first : '');
+    _selectedSubject = homework?.subject ?? (_availableSubjects.isNotEmpty ? _availableSubjects.first : '');
     _selectedPriority = homework?.priority ?? 1;
     _dueDate = homework?.dueDate ?? DateTime.now().add(const Duration(days: 1));
     _dueTime = TimeOfDay.fromDateTime(homework?.dueDate ?? DateTime.now().add(const Duration(days: 1)));
@@ -640,30 +642,36 @@ class _AddHomeworkDialogState extends State<AddHomeworkDialog> {
                 maxLines: 3,
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedSubject.isEmpty ? null : _selectedSubject,
-                decoration: InputDecoration(
-                  labelText: 'Предмет',
-                  errorText: _selectedSubject.isEmpty ? 'Выберите предмет' : null,
-                  suffixIcon: widget.subjects.isEmpty 
-                      ? IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: () => _addNewSubject(context),
-                        )
-                      : null,
-                ),
-                items: widget.subjects.isEmpty 
-                    ? [const DropdownMenuItem(value: '', child: Text('Добавьте предмет'))]
-                    : widget.subjects.map((subject) {
-                        return DropdownMenuItem(value: subject, child: Text(subject));
-                      }).toList(),
-                onChanged: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    setState(() {
-                      _selectedSubject = value;
-                    });
-                  }
-                },
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedSubject.isEmpty ? null : _selectedSubject,
+                      decoration: const InputDecoration(
+                        labelText: 'Предмет',
+                      ),
+                      hint: const Text('Выберите предмет'),
+                      items: _availableSubjects.isEmpty 
+                          ? [const DropdownMenuItem(value: '', child: Text('Добавьте предмет'))]
+                          : _availableSubjects.map((subject) {
+                              return DropdownMenuItem(value: subject, child: Text(subject));
+                            }).toList(),
+                      onChanged: (value) {
+                        if (value != null && value.isNotEmpty) {
+                          setState(() {
+                            _selectedSubject = value;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle),
+                    color: AppTheme.primaryColor,
+                    onPressed: () => _addNewSubject(context),
+                    tooltip: 'Добавить предмет',
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
@@ -756,6 +764,7 @@ class _AddHomeworkDialogState extends State<AddHomeworkDialog> {
             hintText: 'Введите название предмета',
           ),
           autofocus: true,
+          textCapitalization: TextCapitalization.words,
         ),
         actions: [
           TextButton(
@@ -775,7 +784,12 @@ class _AddHomeworkDialogState extends State<AddHomeworkDialog> {
       ),
     );
     
-    if (subject != null && subject.isNotEmpty) {
+    if (subject != null && subject.isNotEmpty && !_availableSubjects.contains(subject)) {
+      setState(() {
+        _availableSubjects.add(subject);
+        _selectedSubject = subject;
+      });
+    } else if (subject != null && subject.isNotEmpty) {
       setState(() {
         _selectedSubject = subject;
       });
