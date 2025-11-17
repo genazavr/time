@@ -81,7 +81,9 @@ class HomeworkService {
     final userId = _firebaseService.getCurrentUser()?.uid;
     if (userId == null) throw Exception('User not authenticated');
 
-    await _database.child('users/$userId/homework/${homework.id}').update(homework.toMap());
+    final homeworkData = homework.toMap();
+    homeworkData['updatedAt'] = DateTime.now().toIso8601String();
+    await _database.child('users/$userId/homework/${homework.id}').set(homeworkData);
   }
 
   Future<void> deleteHomework(String homeworkId) async {
@@ -101,11 +103,18 @@ class HomeworkService {
     final homework = Homework.fromMap(Map<String, dynamic>.from(snapshot.value as Map), homeworkId);
     final newStatus = !homework.isCompleted;
     
-    await _database.child('users/$userId/homework/$homeworkId').update({
+    final updateData = <String, dynamic>{
       'isCompleted': newStatus,
-      'completedAt': newStatus ? DateTime.now().toIso8601String() : (homework.completedAt?.toIso8601String() ?? ''),
       'updatedAt': DateTime.now().toIso8601String(),
-    });
+    };
+    
+    if (newStatus) {
+      updateData['completedAt'] = DateTime.now().toIso8601String();
+    } else {
+      updateData['completedAt'] = null;
+    }
+    
+    await _database.child('users/$userId/homework/$homeworkId').update(updateData);
   }
 
   Future<Homework?> getHomeworkById(String homeworkId) async {

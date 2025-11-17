@@ -40,16 +40,22 @@ class Homework {
       description: map['description'],
       subject: map['subject'] ?? '',
       dueDate: DateTime.parse(map['dueDate']),
-      assignedDate: map['assignedDate'] != null ? DateTime.parse(map['assignedDate']) : null,
+      assignedDate: map['assignedDate'] != null && map['assignedDate'] != '' 
+          ? DateTime.parse(map['assignedDate']) 
+          : null,
       isCompleted: map['isCompleted'] ?? false,
-      completedAt: map['completedAt'] != null ? DateTime.parse(map['completedAt']) : null,
+      completedAt: map['completedAt'] != null && map['completedAt'] != '' 
+          ? DateTime.parse(map['completedAt']) 
+          : null,
       priority: map['priority'] ?? 1,
-      attachments: List<String>.from(map['attachments'] ?? []),
-      tags: List<String>.from(map['tags'] ?? []),
+      attachments: map['attachments'] != null ? List<String>.from(map['attachments']) : [],
+      tags: map['tags'] != null ? List<String>.from(map['tags']) : [],
       estimatedMinutes: map['estimatedMinutes'] ?? 30,
       teacherName: map['teacherName'],
       createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
+      updatedAt: map['updatedAt'] != null && map['updatedAt'] != '' 
+          ? DateTime.parse(map['updatedAt']) 
+          : null,
     );
   }
 

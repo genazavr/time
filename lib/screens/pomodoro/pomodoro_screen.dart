@@ -662,49 +662,56 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('$currentValue минут'),
-            Slider(
-              value: currentValue.toDouble(),
-              min: 1,
-              max: 60,
-              divisions: 59,
-              onChanged: (value) {
-                currentValue = value.round();
-                setState(() {});
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('$currentValue минут', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              Slider(
+                value: currentValue.toDouble(),
+                min: 1,
+                max: 60,
+                divisions: 59,
+                label: '$currentValue мин',
+                onChanged: (value) {
+                  setDialogState(() {
+                    currentValue = value.round();
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Отмена'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                setState(() {
+                  switch (setting) {
+                    case 'workDuration':
+                      _settings = _settings.copyWith(workDuration: currentValue);
+                      break;
+                    case 'shortBreakDuration':
+                      _settings = _settings.copyWith(shortBreakDuration: currentValue);
+                      break;
+                    case 'longBreakDuration':
+                      _settings = _settings.copyWith(longBreakDuration: currentValue);
+                      break;
+                  }
+                  _updateTimerDuration();
+                });
+                await _pomodoroService.updateSettings(_settings);
+                if (mounted) Navigator.pop(context);
               },
+              child: const Text('Сохранить'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              switch (setting) {
-                case 'workDuration':
-                  _settings = _settings.copyWith(workDuration: currentValue);
-                  break;
-                case 'shortBreakDuration':
-                  _settings = _settings.copyWith(shortBreakDuration: currentValue);
-                  break;
-                case 'longBreakDuration':
-                  _settings = _settings.copyWith(longBreakDuration: currentValue);
-                  break;
-              }
-              _pomodoroService.updateSettings(_settings);
-              _updateTimerDuration();
-              Navigator.pop(context);
-            },
-            child: const Text('Сохранить'),
-          ),
-        ],
       ),
     );
   }
