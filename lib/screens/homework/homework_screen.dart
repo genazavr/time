@@ -379,19 +379,6 @@ class _HomeworkScreenState extends State<HomeworkScreen> with TickerProviderStat
     return colors[index];
   }
 
-  void _showAddHomeworkDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AddHomeworkDialog(
-        subjects: _subjects,
-        onSave: (homework) async {
-          await _homeworkService.addHomework(homework);
-          _loadStatistics();
-        },
-      ),
-    );
-  }
-
   void _showHomeworkDetails(Homework homework) {
     showDialog(
       context: context,
@@ -469,6 +456,32 @@ class _HomeworkScreenState extends State<HomeworkScreen> with TickerProviderStat
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showAddHomeworkDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AddHomeworkDialog(
+        subjects: _subjects,
+        onSave: (homework) async {
+          try {
+            await _homeworkService.addHomework(homework);
+            _loadStatistics();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Домашнее задание добавлено')),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Ошибка: $e')),
+              );
+            }
+          }
+        },
       ),
     );
   }
@@ -629,14 +642,27 @@ class _AddHomeworkDialogState extends State<AddHomeworkDialog> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _selectedSubject.isEmpty ? null : _selectedSubject,
-                decoration: const InputDecoration(labelText: 'Предмет'),
-                items: widget.subjects.map((subject) {
-                  return DropdownMenuItem(value: subject, child: Text(subject));
-                }).toList(),
+                decoration: InputDecoration(
+                  labelText: 'Предмет',
+                  errorText: _selectedSubject.isEmpty ? 'Выберите предмет' : null,
+                  suffixIcon: widget.subjects.isEmpty 
+                      ? IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () => _addNewSubject(context),
+                        )
+                      : null,
+                ),
+                items: widget.subjects.isEmpty 
+                    ? [const DropdownMenuItem(value: '', child: Text('Добавьте предмет'))]
+                    : widget.subjects.map((subject) {
+                        return DropdownMenuItem(value: subject, child: Text(subject));
+                      }).toList(),
                 onChanged: (value) {
-                  setState(() {
-                    _selectedSubject = value!;
-                  });
+                  if (value != null && value.isNotEmpty) {
+                    setState(() {
+                      _selectedSubject = value;
+                    });
+                  }
                 },
               ),
               const SizedBox(height: 16),
@@ -717,6 +743,45 @@ class _AddHomeworkDialogState extends State<AddHomeworkDialog> {
     }
   }
 
+  void _addNewSubject(BuildContext context) async {
+    final controller = TextEditingController();
+    final subject = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Новый предмет'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Название предмета',
+            hintText: 'Введите название предмета',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isNotEmpty) {
+                Navigator.pop(context, text);
+              }
+            },
+            child: const Text('Добавить'),
+          ),
+        ],
+      ),
+    );
+    
+    if (subject != null && subject.isNotEmpty) {
+      setState(() {
+        _selectedSubject = subject;
+      });
+    }
+  }
+
   void _saveHomework() {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -725,7 +790,7 @@ class _AddHomeworkDialogState extends State<AddHomeworkDialog> {
       return;
     }
 
-    if (_selectedSubject.isEmpty) {
+    if (_selectedSubject.isEmpty || _selectedSubject == '') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Выберите предмет')),
       );
