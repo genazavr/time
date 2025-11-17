@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import '../../models/user_metrics.dart';
+import '../../services/app_state_service.dart';
 import '../../services/firebase_service.dart';
 import '../../services/local_avatar_service.dart';
-import '../../services/user_metrics_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/achievement_utils.dart';
 import '../calendar/calendar_screen.dart';
@@ -178,8 +178,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final FirebaseService _firebaseService = FirebaseService();
-  final UserMetricsService _metricsService = UserMetricsService();
   final LocalAvatarService _avatarService = LocalAvatarService();
+  final AppStateService _appStateService = AppStateService();
 
   String? _userName;
 
@@ -193,10 +193,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadUserName() async {
     final user = _firebaseService.getCurrentUser();
     if (user == null) return;
-    final data = await _firebaseService.getUserData(user.uid);
+    final data = _appStateService.userData;
     if (!mounted) return;
     setState(() {
-      _userName = (data?['name'] as String?)?.trim();
+      _userName = (data['name'] as String?)?.trim();
       if (_userName != null && _userName!.isEmpty) {
         _userName = null;
       }
@@ -235,7 +235,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: StreamBuilder<UserMetrics>(
-        stream: _metricsService.watchMetrics(),
+        stream: _appStateService.watchMetrics(),
         initialData: UserMetrics.empty,
         builder: (context, snapshot) {
           final metrics = snapshot.data ?? UserMetrics.empty;
