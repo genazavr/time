@@ -277,7 +277,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(20),
         ),
         color: const Color(0xFF1F2937),
-        shadowColor: Colors.black.withOpacity(0.3),
+        shadowColor: Colors.black.withValues(alpha: 0.3),
       ),
     );
   }

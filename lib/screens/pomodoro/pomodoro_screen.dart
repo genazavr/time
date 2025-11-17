@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../models/pomodoro_session.dart';
 import '../../services/pomodoro_service.dart';
@@ -496,7 +495,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
                   height: 250,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _getTypeColor().withOpacity(0.1),
+                    color: _getTypeColor().withValues(alpha: 0.1),
                     border: Border.all(
                       color: _getTypeColor(),
                       width: 8,

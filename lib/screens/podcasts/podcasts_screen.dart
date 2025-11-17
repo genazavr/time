@@ -94,8 +94,8 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
                   _selectedCategory = category;
                 });
               },
-              backgroundColor: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : null,
-              selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+              backgroundColor: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.1) : null,
+              selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
             ),
           );
         },
@@ -168,7 +168,7 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
                 height: 80,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
                   image: podcast.imageUrl != null
                       ? DecorationImage(
                           image: NetworkImage(podcast.imageUrl!),
@@ -223,7 +223,7 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppTheme.secondaryColor.withOpacity(0.1),
+                            color: AppTheme.secondaryColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
