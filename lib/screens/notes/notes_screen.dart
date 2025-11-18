@@ -384,28 +384,30 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.existingNote == null ? 'Добавить заметку' : 'Редактировать заметку'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Заголовок',
-                hintText: 'Введите заголовок заметки',
+      content: SingleChildScrollView(
+        child: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Заголовок',
+                  hintText: 'Введите заголовок заметки',
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _contentController,
-              decoration: const InputDecoration(
-                labelText: 'Содержание',
-                hintText: 'Введите содержание заметки',
+              const SizedBox(height: 16),
+              TextField(
+                controller: _contentController,
+                decoration: const InputDecoration(
+                  labelText: 'Содержание',
+                  hintText: 'Введите содержание заметки',
+                ),
+                maxLines: 8,
               ),
-              maxLines: 8,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [
@@ -430,12 +432,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     }
 
     final note = Note(
-      id: widget.existingNote?.id ?? '',
+      id: widget.existingNote?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       title: _titleController.text.trim(),
       content: _contentController.text.trim().isEmpty 
           ? null 
           : _contentController.text.trim(),
       createdAt: widget.existingNote?.createdAt ?? DateTime.now(),
+      updatedAt: widget.existingNote != null ? DateTime.now() : null,
     );
 
     widget.onSave(note);

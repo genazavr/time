@@ -553,11 +553,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildStatsSection(UserMetrics metrics) {
     final stats = [
       _ProfileStat(
-        icon: Icons.task_alt,
+        icon: Icons.check_circle_outline,
         color: AppTheme.accentColor,
-        title: 'Задачи',
-        value: metrics.completedTasks.toString(),
-        subtitle: metrics.totalTasks > 0 ? 'из ${metrics.totalTasks}' : 'Нет задач',
+        title: 'Активные задачи',
+        value: metrics.activeTasks.toString(),
+        subtitle: 'Требуют внимания',
       ),
       _ProfileStat(
         icon: Icons.timer_outlined,
