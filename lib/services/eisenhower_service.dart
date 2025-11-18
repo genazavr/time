@@ -58,7 +58,8 @@ class EisenhowerService {
     if (userId == null) throw Exception('User not authenticated');
 
     final taskRef = _database.child('users/$userId/eisenhower').push();
-    await taskRef.set(task.toMap());
+    final taskWithId = task.copyWith(id: taskRef.key);
+    await taskRef.set(taskWithId.toMap());
     return taskRef.key!;
   }
 

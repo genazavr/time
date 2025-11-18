@@ -14,28 +14,50 @@ class EisenhowerScreen extends StatefulWidget {
 class _EisenhowerScreenState extends State<EisenhowerScreen> {
   final EisenhowerService _eisenhowerService = EisenhowerService();
   List<EisenhowerTask> _tasks = [];
-  Map<String, dynamic> _statistics = {};
+  Map<String, dynamic> _statistics = {
+    'pendingTasks': 0,
+    'completedTasks': 0,
+    'totalTasks': 0,
+    'overdueTasks': 0,
+    'completionRate': 0,
+    'quadrantDistribution': {'1': 0, '2': 0, '3': 0, '4': 0},
+  };
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadTasks();
     _loadStatistics();
+    
+    // Убираем индикатор загрузки после небольшой задержки для лучшего UX
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
   }
 
   void _loadTasks() {
     _eisenhowerService.getTasks().listen((tasks) {
-      setState(() {
-        _tasks = tasks;
-      });
+      if (mounted) {
+        setState(() {
+          _tasks = tasks;
+          _isLoading = false;
+        });
+      }
     });
   }
 
   Future<void> _loadStatistics() async {
     final stats = await _eisenhowerService.getStatistics();
-    setState(() {
-      _statistics = stats;
-    });
+    if (mounted) {
+      setState(() {
+        _statistics = stats;
+      });
+    }
   }
 
   List<EisenhowerTask> _getTasksForQuadrant(int quadrant) {
@@ -51,20 +73,286 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
         title: const Text('Матрица Эйзенхауэра'),
         automaticallyImplyLeading: true,
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? _buildLoadingState()
+          : _tasks.isEmpty && _statistics['totalTasks'] == 0
+              ? _buildEmptyState()
+              : _buildContent(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddTaskDialog,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Загрузка задач...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.only(bottom: 80),
+          padding: const EdgeInsets.all(32),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildHeader(),
-              _buildMatrix(),
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(60),
+                ),
+                child: const Icon(
+                  Icons.dashboard_outlined,
+                  size: 60,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Матрица Эйзенхауэра',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Управляйте приоритетами эффективно\nраспределяя задачи по квадрантам',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6B7280),
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 32),
+              _buildQuadrantPreview(),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: _showAddTaskDialog,
+                icon: const Icon(Icons.add),
+                label: const Text('Добавить первую задачу'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTaskDialog,
-        child: const Icon(Icons.add),
+    );
+  }
+
+  Widget _buildQuadrantPreview() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+            ),
+            child: const Row(
+              children: [
+                SizedBox(width: 80),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'СРОЧНО',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFEF4444),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'НЕ СРОЧНО',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF10B981),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                width: 80,
+                padding: const EdgeInsets.all(8),
+                child: const Column(
+                  children: [
+                    Text(
+                      'ВАЖНО',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6366F1),
+                        fontSize: 10,
+                      ),
+                    ),
+                    Text(
+                      'Кризисные',
+                      style: TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 60,
+                  margin: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.priority_high,
+                      color: Color(0xFFEF4444),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 60,
+                  margin: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD1FAE5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.schedule,
+                      color: Color(0xFF10B981),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Container(
+                width: 80,
+                padding: const EdgeInsets.all(8),
+                child: const Column(
+                  children: [
+                    Text(
+                      'НЕ ВАЖНО',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6366F1),
+                        fontSize: 10,
+                      ),
+                    ),
+                    Text(
+                      'Помощь',
+                      style: TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 60,
+                  margin: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFED7AA),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.people,
+                      color: Color(0xFFF59E0B),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 60,
+                  margin: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.coffee,
+                      color: Color(0xFF6B7280),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: Column(
+          children: [
+            _buildHeader(),
+            _buildMatrix(),
+          ],
+        ),
       ),
     );
   }
@@ -476,7 +764,14 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
       context: context,
       builder: (context) => AddTaskDialog(
         onSave: (task) async {
-          await _eisenhowerService.addTask(task);
+          try {
+            await _eisenhowerService.addTask(task);
+            _loadStatistics(); // Обновляем статистику после добавления
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Ошибка при добавлении задачи: $e')),
+            );
+          }
         },
       ),
     );
@@ -488,7 +783,14 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
       builder: (context) => AddTaskDialog(
         existingTask: task,
         onSave: (updatedTask) async {
-          await _eisenhowerService.updateTask(updatedTask);
+          try {
+            await _eisenhowerService.updateTask(updatedTask);
+            _loadStatistics(); // Обновляем статистику после редактирования
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Ошибка при обновлении задачи: $e')),
+            );
+          }
         },
       ),
     );
@@ -539,8 +841,14 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
   }
 
   void _toggleTaskCompletion(EisenhowerTask task) async {
-    await _eisenhowerService.toggleTaskCompletion(task.id);
-    _loadStatistics();
+    try {
+      await _eisenhowerService.toggleTaskCompletion(task.id);
+      _loadStatistics();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка при изменении статуса задачи: $e')),
+      );
+    }
   }
 
   void _showMoveDialog(EisenhowerTask task) {
@@ -554,8 +862,16 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
             return ListTile(
               title: Text('Квадрант $quadrant: ${_getQuadrantDescription(quadrant)}'),
               onTap: () async {
-                await _eisenhowerService.moveTaskToQuadrant(task.id, quadrant);
-                Navigator.pop(context);
+                try {
+                  await _eisenhowerService.moveTaskToQuadrant(task.id, quadrant);
+                  Navigator.pop(context);
+                  _loadStatistics();
+                } catch (e) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Ошибка при перемещении задачи: $e')),
+                  );
+                }
               },
             );
           }).toList(),
@@ -577,9 +893,16 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
           ),
           TextButton(
             onPressed: () async {
-              await _eisenhowerService.deleteTask(task.id);
-              Navigator.pop(context);
-              _loadStatistics();
+              try {
+                await _eisenhowerService.deleteTask(task.id);
+                Navigator.pop(context);
+                _loadStatistics();
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка при удалении задачи: $e')),
+                );
+              }
             },
             child: const Text('Удалить', style: TextStyle(color: Colors.red)),
           ),
@@ -777,7 +1100,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     }
 
     final task = EisenhowerTask(
-      id: widget.existingTask?.id ?? '',
+      id: widget.existingTask?.id ?? '', // Для новых задач ID будет установлен в сервисе
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim().isEmpty 
           ? null 
