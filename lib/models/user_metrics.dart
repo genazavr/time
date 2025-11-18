@@ -4,7 +4,6 @@ class UserMetrics {
   final int totalTasks;
   final int completedTasks;
   final int tasksDueToday;
-  final int activeTasks;
   final int totalHomework;
   final int completedHomework;
   final int overdueHomework;
@@ -19,7 +18,6 @@ class UserMetrics {
     required this.totalTasks,
     required this.completedTasks,
     required this.tasksDueToday,
-    required this.activeTasks,
     required this.totalHomework,
     required this.completedHomework,
     required this.overdueHomework,
@@ -47,7 +45,6 @@ class UserMetrics {
     totalTasks: 0,
     completedTasks: 0,
     tasksDueToday: 0,
-    activeTasks: 0,
     totalHomework: 0,
     completedHomework: 0,
     overdueHomework: 0,

@@ -103,47 +103,38 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
   }
 
   Widget _buildMatrix() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildMatrixHeader(),
-            const SizedBox(height: 16),
-            ConstrainedBox(
-              constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 32),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _buildQuadrant(1, 'Срочно\nВажно', AppTheme.errorColor),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildQuadrant(2, 'Не срочно\nВажно', AppTheme.accentColor),
-                  ),
-                ],
+    return Container(
+      margin: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _buildMatrixHeader(),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildQuadrant(1, 'Срочно\nВажно', AppTheme.errorColor),
               ),
-            ),
-            const SizedBox(height: 8),
-            ConstrainedBox(
-              constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 32),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _buildQuadrant(3, 'Срочно\nНе важно', AppTheme.warningColor),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildQuadrant(4, 'Не срочно\nНе важно', Colors.grey),
-                  ),
-                ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuadrant(2, 'Не срочно\nВажно', AppTheme.accentColor),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildQuadrant(3, 'Срочно\nНе важно', AppTheme.warningColor),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuadrant(4, 'Не срочно\nНе важно', Colors.grey),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
