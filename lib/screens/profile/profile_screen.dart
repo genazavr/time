@@ -9,11 +9,11 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../models/user_metrics.dart';
 import '../../models/user_notification.dart';
+import '../../services/app_state_service.dart';
 import '../../services/firebase_service.dart';
 import '../../services/local_avatar_service.dart';
 import '../../services/notification_center_service.dart';
 import '../../services/notification_service.dart';
-import '../../services/user_metrics_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/achievement_utils.dart';
 
@@ -26,14 +26,15 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final FirebaseService _firebaseService = FirebaseService();
-  final UserMetricsService _metricsService = UserMetricsService();
   final LocalAvatarService _avatarService = LocalAvatarService();
   final ImagePicker _imagePicker = ImagePicker();
   final NotificationCenterService _notificationCenter = NotificationCenterService();
   final NotificationService _notificationService = NotificationService();
+  final AppStateService _appStateService = AppStateService();
 
   late final Stream<List<UserNotification>> _notificationsStream;
   StreamSubscription<List<UserNotification>>? _notificationsSubscription;
+  StreamSubscription<Map<String, dynamic>>? _userDataSubscription;
   Map<String, dynamic> _userData = {};
   bool _isAvatarLoading = false;
   int _unreadNotifications = 0;
@@ -49,23 +50,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() => _unreadNotifications = unread);
       }
     });
-    _loadUserData();
+    _userDataSubscription = _appStateService.watchUserData().listen((userData) {
+      if (mounted) {
+        setState(() {
+          _userData = userData;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _notificationsSubscription?.cancel();
+    _userDataSubscription?.cancel();
     super.dispose();
-  }
-
-  Future<void> _loadUserData() async {
-    final user = _firebaseService.getCurrentUser();
-    if (user == null) return;
-    final userData = await _firebaseService.getUserData(user.uid);
-    if (!mounted) return;
-    setState(() {
-      _userData = userData?.cast<String, dynamic>() ?? {};
-    });
   }
 
   Future<void> _pickAvatar() async {
@@ -262,7 +260,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       body: StreamBuilder<UserMetrics>(
-        stream: _metricsService.watchMetrics(),
+        stream: _appStateService.watchMetrics(),
         initialData: UserMetrics.empty,
         builder: (context, snapshot) {
           final metrics = snapshot.data ?? UserMetrics.empty;

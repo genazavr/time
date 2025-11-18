@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'services/app_state_service.dart';
 import 'services/firebase_service.dart';
 import 'services/notification_center_service.dart';
 import 'services/notification_service.dart';
@@ -47,6 +48,7 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   final FirebaseService _firebaseService = FirebaseService();
   final NotificationCenterService _notificationCenter = NotificationCenterService();
+  final AppStateService _appStateService = AppStateService();
   StreamSubscription<User?>? _authSubscription;
 
   bool _isAuthenticated = false;
@@ -61,6 +63,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       _isAuthenticated = true;
       _isInitializing = false;
       unawaited(_notificationCenter.start(currentUser.uid));
+      _appStateService.initialize(currentUser.uid);
     } else {
       _isInitializing = false;
     }
@@ -68,8 +71,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _authSubscription = _firebaseService.auth.authStateChanges().listen((user) {
       if (user != null) {
         unawaited(_notificationCenter.start(user.uid));
+        _appStateService.initialize(user.uid);
       } else {
         unawaited(_notificationCenter.stop());
+        _appStateService.cleanup();
       }
 
       if (!mounted) return;
@@ -87,6 +92,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void dispose() {
     _authSubscription?.cancel();
     unawaited(_notificationCenter.stop());
+    _appStateService.dispose();
     super.dispose();
   }
 
