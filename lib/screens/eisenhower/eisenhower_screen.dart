@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../../models/eisenhower_task.dart';
@@ -23,6 +24,7 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
     'quadrantDistribution': {'1': 0, '2': 0, '3': 0, '4': 0},
   };
   bool _isLoading = true;
+  StreamSubscription<List<EisenhowerTask>>? _tasksSubscription;
 
   @override
   void initState() {
@@ -41,14 +43,22 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
   }
 
   void _loadTasks() {
-    _eisenhowerService.getTasks().listen((tasks) {
+    _tasksSubscription?.cancel();
+    _tasksSubscription = _eisenhowerService.getTasks().listen((tasks) {
       if (mounted) {
         setState(() {
           _tasks = tasks;
           _isLoading = false;
         });
+        _loadStatistics();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _tasksSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadStatistics() async {
@@ -66,6 +76,10 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
         .toList();
   }
 
+  int get _activeTasksCount {
+    return _tasks.where((task) => !task.isCompleted).length;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,7 +89,7 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
       ),
       body: _isLoading
           ? _buildLoadingState()
-          : _tasks.isEmpty && _statistics['totalTasks'] == 0
+          : _activeTasksCount == 0
               ? _buildEmptyState()
               : _buildContent(),
       floatingActionButton: FloatingActionButton(
@@ -766,11 +780,12 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
         onSave: (task) async {
           try {
             await _eisenhowerService.addTask(task);
-            _loadStatistics(); // Обновляем статистику после добавления
           } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Ошибка при добавлении задачи: $e')),
-            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Ошибка при добавлении задачи: $e')),
+              );
+            }
           }
         },
       ),
@@ -785,11 +800,12 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
         onSave: (updatedTask) async {
           try {
             await _eisenhowerService.updateTask(updatedTask);
-            _loadStatistics(); // Обновляем статистику после редактирования
           } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Ошибка при обновлении задачи: $e')),
-            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Ошибка при обновлении задачи: $e')),
+              );
+            }
           }
         },
       ),
@@ -1100,13 +1116,14 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     }
 
     final task = EisenhowerTask(
-      id: widget.existingTask?.id ?? '', // Для новых задач ID будет установлен в сервисе
+      id: widget.existingTask?.id ?? '',
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim().isEmpty 
           ? null 
           : _descriptionController.text.trim(),
       quadrant: _selectedQuadrant,
       dueDate: _dueDate,
+      isCompleted: widget.existingTask?.isCompleted ?? false,
       estimatedMinutes: int.tryParse(_estimatedMinutesController.text) ?? 30,
       tags: _tags,
       createdAt: widget.existingTask?.createdAt ?? DateTime.now(),
