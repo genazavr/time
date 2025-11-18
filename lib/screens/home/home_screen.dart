@@ -30,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   String? _userName;
   late AnimationController _animationController;
-  late AnimationController _buttonAnimationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
 
@@ -41,21 +40,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _loadUserName();
 
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
 
-    _buttonAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-
-    _slideAnimation = Tween<double>(begin: 50.0, end: 0.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    _slideAnimation = Tween<double>(begin: 50, end: 0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
 
     _animationController.forward();
@@ -64,7 +59,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _animationController.dispose();
-    _buttonAnimationController.dispose();
     super.dispose();
   }
 
@@ -82,43 +76,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   String _greetingName() {
-    if (_userName != null && _userName!.isNotEmpty) {
-      return _userName!;
+    if (_userName != null && _userName!.isNotEmpty) return _userName!;
+    final u = _firebaseService.getCurrentUser();
+    if (u?.displayName != null && u!.displayName!.trim().isNotEmpty) {
+      return u.displayName!.trim();
     }
-    final user = _firebaseService.getCurrentUser();
-    final displayName = user?.displayName;
-    if (displayName != null && displayName.trim().isNotEmpty) {
-      return displayName.trim();
+    if (u?.email != null && u!.email!.isNotEmpty) {
+      return u.email!.split('@').first;
     }
-    final email = user?.email;
-    if (email == null || email.isEmpty) {
-      return 'Пользователь';
-    }
-    return email.split('@').first;
+    return 'Пользователь';
   }
 
   String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Доброе утро';
-    if (hour < 17) return 'Добрый день';
-    if (hour < 22) return 'Добрый вечер';
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Доброе утро';
+    if (h < 17) return 'Добрый день';
+    if (h < 22) return 'Добрый вечер';
     return 'Доброй ночи';
   }
 
   ImageProvider? _resolveAvatar(String? path) {
-    if (path == null || path.isEmpty || kIsWeb) {
-      return null;
-    }
+    if (path == null || path.isEmpty || kIsWeb) return null;
     final file = File(path);
-    if (!file.existsSync()) {
-      return null;
-    }
+    if (!file.existsSync()) return null;
     return FileImage(file);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // ВЕСЬ экран — это один скролл
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -131,36 +118,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
         ),
-        child: SafeArea(
-          child: AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) {
-              return FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.3),
-                    end: Offset.zero,
-                  ).animate(_slideAnimation),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeader(),
-                        const SizedBox(height: 40),
-                        _buildWelcomeSection(),
-                        const SizedBox(height: 60),
-                        _buildNavigationGrid(),
-                        const SizedBox(height: 60),
-                        _buildBottomCard(),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+            child: Transform.translate(
+              offset: Offset(0, _slideAnimation.value),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 40),
+                  _buildWelcomeSection(),
+                  const SizedBox(height: 60),
+                  _buildNavigationGrid(),
+                  const SizedBox(height: 60),
+                  _buildBottomCard(),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -181,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ValueListenableBuilder<String?>(
           valueListenable: _avatarService.avatarNotifier,
           builder: (context, path, _) {
-            final image = _resolveAvatar(path);
+            final img = _resolveAvatar(path);
             return GestureDetector(
               onTap: () => Navigator.push(
                 context,
@@ -190,18 +166,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: CircleAvatar(
                 radius: 24,
                 backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-                backgroundImage: image,
-                child: image == null
-                    ? Icon(
-                  Icons.person_outline,
-                  color: AppTheme.primaryColor,
-                  size: 28,
-                )
+                backgroundImage: img,
+                child: img == null
+                    ? Icon(Icons.person_outline,
+                    color: AppTheme.primaryColor, size: 28)
                     : null,
               ),
             );
           },
-        ),
+        )
       ],
     );
   }
@@ -248,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         color: AppTheme.primaryColor,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const PomodoroScreen()),
+          MaterialPageRoute(builder: (c) => const PomodoroScreen()),
         ),
       ),
       _NavigationButton(
@@ -257,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         color: AppTheme.accentColor,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const EisenhowerScreen()),
+          MaterialPageRoute(builder: (c) => const EisenhowerScreen()),
         ),
       ),
       _NavigationButton(
@@ -266,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         color: AppTheme.secondaryColor,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const HomeworkScreen()),
+          MaterialPageRoute(builder: (c) => const HomeworkScreen()),
         ),
       ),
       _NavigationButton(
@@ -275,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         color: AppTheme.warningColor,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const ScheduleScreen()),
+          MaterialPageRoute(builder: (c) => const ScheduleScreen()),
         ),
       ),
       _NavigationButton(
@@ -284,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         color: Colors.blue,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const NotesScreen()),
+          MaterialPageRoute(builder: (c) => const NotesScreen()),
         ),
       ),
       _NavigationButton(
@@ -293,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         color: Colors.purple,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const CalendarScreen()),
+          MaterialPageRoute(builder: (c) => const CalendarScreen()),
         ),
       ),
       _NavigationButton(
@@ -302,18 +275,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         color: Colors.red,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const PodcastsScreen()),
+          MaterialPageRoute(builder: (c) => const PodcastsScreen()),
         ),
       ),
       _NavigationButton(
         icon: Icons.analytics_outlined,
         label: 'Прогресс',
         color: Colors.teal,
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Статистика скоро будет доступна')),
-          );
-        },
+        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Статистика скоро будет доступна')),
+        ),
       ),
     ];
 
@@ -334,9 +305,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             duration: const Duration(milliseconds: 500),
             columnCount: 2,
             child: ScaleAnimation(
-              child: FadeInAnimation(
-                child: buttons[index],
-              ),
+              child: FadeInAnimation(child: buttons[index]),
             ),
           );
         },
@@ -358,7 +327,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.2),
-          width: 1,
         ),
       ),
       child: Column(
@@ -366,11 +334,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.lightbulb_outline,
-                color: AppTheme.primaryColor,
-                size: 20,
-              ),
+              Icon(Icons.lightbulb_outline,
+                  color: AppTheme.primaryColor, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Совет дня',
@@ -413,86 +378,79 @@ class _NavigationButton extends StatefulWidget {
 
 class _NavigationButtonState extends State<_NavigationButton>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
+  late AnimationController _c;
+  late Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _c = AnimationController(
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    _scale = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _c, curve: Curves.easeInOut),
     );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _c.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
+      onTapDown: (_) => _c.forward(),
       onTapUp: (_) {
-        _controller.reverse();
+        _c.reverse();
         widget.onTap();
       },
-      onTapCancel: () => _controller.reverse(),
+      onTapCancel: () => _c.reverse(),
       child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.color.withValues(alpha: 0.15),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-                border: Border.all(
-                  color: widget.color.withValues(alpha: 0.1),
-                  width: 1,
+        animation: _scale,
+        builder: (context, child) => Transform.scale(
+          scale: _scale.value,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withValues(alpha: 0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: widget.color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      widget.icon,
-                      color: widget.color,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    widget.label,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+              ],
+              border: Border.all(
+                color: widget.color.withValues(alpha: 0.1),
               ),
             ),
-          );
-        },
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: widget.color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(widget.icon, color: widget.color, size: 30),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  widget.label,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -87,79 +87,47 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ],
         ),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Row(
-                children: [
-                   _buildNavItem(Icons.home_outlined, 'Главная', 0, 60),
-                   _buildNavItem(Icons.timer_outlined, 'Помодоро', 1, 60),
-                   _buildNavItem(Icons.grid_view_outlined, 'Эйзенхауэр', 2, 70),
-                   _buildNavItem(Icons.assignment_outlined, 'ДЗ', 3, 50),
-                   _buildNavItem(Icons.schedule, 'Расписание', 4, 70),
-                   _buildNavItem(Icons.headphones_outlined, 'Подкасты', 5, 60),
-                   _buildNavItem(Icons.person_outline, 'Профиль', 6, 50),
-                  ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      // 🔥 bottomNavigationBar полностью удалён
     );
   }
 
+  // Оставляем метод, чтобы код не ломался
   Widget _buildNavItem(IconData icon, String label, int index, double width) {
     final isSelected = _currentIndex == index;
     final color = isSelected ? AppTheme.primaryColor : Colors.grey.shade500;
 
-    return GestureDetector(
-      onTap: () => _onTabTapped(index),
-      child: SizedBox(
-        width: width,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: Icon(
-                  key: ValueKey(isSelected),
-                  icon,
-                  color: color,
-                  size: isSelected ? 22 : 18,
-                ),
+    return SizedBox(
+      width: width,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                key: ValueKey(isSelected),
+                icon,
+                color: color,
+                size: isSelected ? 22 : 18,
               ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 9,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                ),
-                textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 9,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
-            ],
-          ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
