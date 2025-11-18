@@ -1,13 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/firebase_service.dart';
+import '../../services/app_state_service.dart';
 
 class HomeScreen extends StatefulWidget {
-  final Function() onLogout;
-
-  const HomeScreen({
-    super.key,
-    required this.onLogout,
-  });
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -15,37 +12,44 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _firebaseService = FirebaseService();
-  Map<dynamic, dynamic>? _userData;
+  final _appStateService = AppStateService();
+  Map<String, dynamic> _userData = {};
   bool _isLoading = true;
+  StreamSubscription<Map<String, dynamic>>? _userDataSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _initializeUserData();
   }
 
-  Future<void> _loadUserData() async {
-    try {
-      final user = _firebaseService.getCurrentUser();
-      if (user != null) {
-        final data = await _firebaseService.getUserData(user.uid);
-        setState(() {
-          _userData = data;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
+  void _initializeUserData() {
+    final user = _firebaseService.getCurrentUser();
+    if (user != null) {
+      _userDataSubscription = _appStateService.watchUserData().listen((userData) {
+        if (mounted) {
+          setState(() {
+            _userData = userData;
+            _isLoading = false;
+          });
+        }
+      });
+    } else {
       setState(() {
         _isLoading = false;
       });
     }
   }
 
+  @override
+  void dispose() {
+    _userDataSubscription?.cancel();
+    super.dispose();
+  }
+
   Future<void> _logout() async {
+    await _userDataSubscription?.cancel();
     await _firebaseService.logout();
-    if (mounted) {
-      widget.onLogout();
-    }
   }
 
   @override
@@ -84,15 +88,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            _userData?['name'] ?? 'Пользователь',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyLarge
-                                ?.copyWith(fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _userData?['email'] ?? '',
+                                                       _userData['name'] ?? 'Пользователь',
+                                                       style: Theme.of(context)
+                                                           .textTheme
+                                                           .bodyLarge
+                                                           ?.copyWith(fontWeight: FontWeight.w500),
+                                                     ),
+                                                     const SizedBox(height: 4),
+                                                     Text(
+                                                       _userData['email'] ?? '',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
