@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../models/podcast.dart';
 import '../../services/podcast_service.dart';
+import '../../services/audio_player_service.dart';
 import '../../theme/app_theme.dart';
 
 class PodcastsScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class PodcastsScreen extends StatefulWidget {
 
 class _PodcastsScreenState extends State<PodcastsScreen> {
   final PodcastService _podcastService = PodcastService();
+  final AudioPlayerService _audioService = AudioPlayerService();
   List<Podcast> _podcasts = [];
   List<String> _categories = [];
   String _selectedCategory = 'all';
@@ -438,9 +440,7 @@ class _PodcastsScreenState extends State<PodcastsScreen> {
 
   void _playPodcast(Podcast podcast) async {
     await _podcastService.incrementPlayCount(podcast.id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Воспроизведение: ${podcast.title}')),
-    );
+    await _audioService.playPodcast(podcast, playlist: _filteredPodcasts);
   }
 
   void _deletePodcast(Podcast podcast) {
