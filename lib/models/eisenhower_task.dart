@@ -24,17 +24,26 @@ class EisenhowerTask {
   });
 
   factory EisenhowerTask.fromMap(Map<String, dynamic> map, String id) {
+    DateTime? parsedDate(dynamic value) {
+      if (value == null) return null;
+      try {
+        return DateTime.parse(value.toString());
+      } catch (_) {
+        return null;
+      }
+    }
+
     return EisenhowerTask(
       id: id,
-      title: map['title'] ?? '',
-      description: map['description'],
-      quadrant: map['quadrant'] ?? 1,
-      dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,
-      isCompleted: map['isCompleted'] ?? false,
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
-      tags: List<String>.from(map['tags'] ?? []),
-      estimatedMinutes: map['estimatedMinutes'] ?? 30,
+      title: map['title']?.toString() ?? '',
+      description: map['description']?.toString(),
+      quadrant: (map['quadrant'] is int) ? map['quadrant'] : 1,
+      dueDate: parsedDate(map['dueDate']),
+      isCompleted: map['isCompleted'] == true,
+      createdAt: parsedDate(map['createdAt']) ?? DateTime.now(),
+      updatedAt: parsedDate(map['updatedAt']),
+      tags: (map['tags'] is List) ? List<String>.from(map['tags']) : [],
+      estimatedMinutes: (map['estimatedMinutes'] is int) ? map['estimatedMinutes'] : 30,
     );
   }
 

@@ -49,6 +49,7 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Матрица Эйзенхауэра'),
+        automaticallyImplyLeading: true,
       ),
       body: SingleChildScrollView(
         child: Padding(

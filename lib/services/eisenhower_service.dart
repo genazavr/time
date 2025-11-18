@@ -12,12 +12,29 @@ class EisenhowerService {
     if (userId == null) return Stream.value([]);
 
     return _database.child('users/$userId/eisenhower').onValue.map((event) {
-      final Map<dynamic, dynamic>? tasksMap = event.snapshot.value as Map<dynamic, dynamic>?;
-      if (tasksMap == null) return [];
+      try {
+        final Map<dynamic, dynamic>? tasksMap = event.snapshot.value as Map<dynamic, dynamic>?;
+        if (tasksMap == null) return <EisenhowerTask>[];
 
-      return tasksMap.entries.map((entry) {
-        return EisenhowerTask.fromMap(Map<String, dynamic>.from(entry.value), entry.key);
-      }).toList();
+        final tasks = <EisenhowerTask>[];
+        for (final entry in tasksMap.entries) {
+          try {
+            if (entry.value is Map) {
+              final task = EisenhowerTask.fromMap(
+                Map<String, dynamic>.from(entry.value as Map),
+                entry.key.toString(),
+              );
+              tasks.add(task);
+            }
+          } catch (e) {
+            print('Error parsing task ${entry.key}: $e');
+          }
+        }
+        return tasks;
+      } catch (e) {
+        print('Error getting tasks: $e');
+        return <EisenhowerTask>[];
+      }
     });
   }
 
