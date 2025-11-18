@@ -39,25 +39,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.initState();
     _avatarService.loadAvatar();
     _loadUserName();
-    
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _buttonAnimationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-    
+
     _slideAnimation = Tween<double>(begin: 50.0, end: 0.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
-    
+
     _animationController.forward();
   }
 
@@ -142,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     begin: const Offset(0, 0.3),
                     end: Offset.zero,
                   ).animate(_slideAnimation),
-                  child: Padding(
+                  child: SingleChildScrollView(
                     padding: const EdgeInsets.all(24.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,8 +152,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         _buildWelcomeSection(),
                         const SizedBox(height: 60),
                         _buildNavigationGrid(),
-                        const Spacer(),
+                        const SizedBox(height: 60),
                         _buildBottomCard(),
+                        const SizedBox(height: 40),
                       ],
                     ),
                   ),
@@ -173,9 +174,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Text(
           'BLISS',
           style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: AppTheme.primaryColor,
-              ),
+            fontWeight: FontWeight.w800,
+            color: AppTheme.primaryColor,
+          ),
         ),
         ValueListenableBuilder<String?>(
           valueListenable: _avatarService.avatarNotifier,
@@ -192,10 +193,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 backgroundImage: image,
                 child: image == null
                     ? Icon(
-                        Icons.person_outline,
-                        color: AppTheme.primaryColor,
-                        size: 28,
-                      )
+                  Icons.person_outline,
+                  color: AppTheme.primaryColor,
+                  size: 28,
+                )
                     : null,
               ),
             );
@@ -212,17 +213,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Text(
           _getGreeting(),
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-              ),
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           _greetingName(),
           style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: Colors.black87,
-              ),
+            fontWeight: FontWeight.w800,
+            color: Colors.black87,
+          ),
         ),
         const SizedBox(height: 12),
         Container(
@@ -374,18 +375,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Text(
                 'Совет дня',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.primaryColor,
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryColor,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            'Начни день с техники Помодоро - 25 минут сфокусированной работы помогут достичь большего.',
+            'Начни день с техники Помодоро — 25 минут сфокусированной работы помогут достичь большего.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey.shade700,
-                ),
+              color: Colors.grey.shade700,
+            ),
           ),
         ],
       ),
@@ -482,9 +483,9 @@ class _NavigationButtonState extends State<_NavigationButton>
                   Text(
                     widget.label,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
