@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 
+import '../models/task_model.dart';
 import '../models/user_metrics.dart';
 
 class AppStateService {
@@ -126,6 +127,47 @@ class AppStateService {
     _subscriptions.add(sub);
   }
 
+  List<Map<dynamic, dynamic>> _mapCollection(dynamic raw) {
+    if (raw is Map) {
+      final result = <Map<dynamic, dynamic>>[];
+      raw.forEach((_, value) {
+        if (value is Map) {
+          result.add(Map<dynamic, dynamic>.from(value));
+        }
+      });
+      return result;
+    }
+
+    if (raw is List) {
+      final result = <Map<dynamic, dynamic>>[];
+      for (final value in raw) {
+        if (value is Map) {
+          result.add(Map<dynamic, dynamic>.from(value));
+        }
+      }
+      return result;
+    }
+
+    return [];
+  }
+
+  bool _isTaskCompleted(dynamic rawStatus) {
+    if (rawStatus == null) return false;
+    if (rawStatus is bool) return rawStatus;
+    if (rawStatus is int) {
+      return rawStatus == TaskStatus.completed.index;
+    }
+    if (rawStatus is String) {
+      final normalized = rawStatus.toLowerCase();
+      if (normalized == 'completed') return true;
+      final numeric = int.tryParse(normalized);
+      if (numeric != null) {
+        return numeric == TaskStatus.completed.index;
+      }
+    }
+    return false;
+  }
+
   Future<void> _emitMetrics() async {
     if (_currentUserId == null) return;
     
@@ -143,26 +185,26 @@ class AppStateService {
       final notesSnap = await _database.ref('users/$_currentUserId/notes').get();
 
       int totalTasks = 0, completedTasks = 0, tasksDueToday = 0, activeTasks = 0;
-      if (tasksSnap.exists && tasksSnap.value is Map) {
-        final tasks = tasksSnap.value as Map;
+      if (tasksSnap.exists && tasksSnap.value != null) {
+        final tasks = _mapCollection(tasksSnap.value);
         totalTasks = tasks.length;
-        tasks.forEach((key, value) {
-          if (value is Map && value['status'] == 'completed') {
+        for (final task in tasks) {
+          final isCompleted = _isTaskCompleted(task['status']);
+          if (isCompleted) {
             completedTasks++;
           }
-          if (value is Map) {
-            final dueDate = value['dueDate'];
-            if (dueDate != null) {
-              try {
-                final due = DateTime.parse(dueDate.toString());
-                if (DateTime(due.year, due.month, due.day).isAtSameMomentAs(today) &&
-                    value['status'] != 'completed') {
-                  tasksDueToday++;
-                }
-              } catch (_) {}
+
+          final dueDate = task['dueDate'];
+          if (dueDate == null) continue;
+
+          try {
+            final due = DateTime.parse(dueDate.toString());
+            final dueDay = DateTime(due.year, due.month, due.day);
+            if (dueDay.isAtSameMomentAs(today) && !isCompleted) {
+              tasksDueToday++;
             }
-          }
-        });
+          } catch (_) {}
+        }
       }
 
       int totalHomework = 0, completedHomework = 0, overdueHomework = 0;
