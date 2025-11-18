@@ -11,7 +11,6 @@ import '../../services/firebase_service.dart';
 import '../../services/local_avatar_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/achievement_utils.dart';
-import '../home/home_screen.dart';
 import '../calendar/calendar_screen.dart';
 import '../pomodoro/pomodoro_screen.dart';
 import '../eisenhower/eisenhower_screen.dart';
@@ -36,7 +35,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
 
   final List<Widget> _pages = [
-    const HomeScreen(),
     const DashboardScreen(),
     const PomodoroScreen(),
     const EisenhowerScreen(),
@@ -118,15 +116,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Row(
                 children: [
-                  _buildNavItem(Icons.home_outlined, 'Дом', 0, 50),
-                  _buildNavItem(Icons.dashboard_outlined, 'Главная', 1, 60),
-                  _buildNavItem(Icons.timer_outlined, 'Помодоро', 2, 60),
-                  _buildNavItem(Icons.grid_view_outlined, 'Эйзенхауэр', 3, 70),
-                  _buildNavItem(Icons.assignment_outlined, 'ДЗ', 4, 50),
-                  _buildNavItem(Icons.schedule, 'Расписание', 5, 70),
-                  _buildNavItem(Icons.headphones_outlined, 'Подкасты', 6, 60),
-                  _buildNavItem(Icons.person_outline, 'Профиль', 7, 50),
-                ],
+                   _buildNavItem(Icons.dashboard_outlined, 'Главная', 0, 60),
+                   _buildNavItem(Icons.timer_outlined, 'Помодоро', 1, 60),
+                   _buildNavItem(Icons.grid_view_outlined, 'Эйзенхауэр', 2, 70),
+                   _buildNavItem(Icons.assignment_outlined, 'ДЗ', 3, 50),
+                   _buildNavItem(Icons.schedule, 'Расписание', 4, 70),
+                   _buildNavItem(Icons.headphones_outlined, 'Подкасты', 5, 60),
+                   _buildNavItem(Icons.person_outline, 'Профиль', 6, 50),
+                 ],
               ),
             ),
           ),
