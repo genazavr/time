@@ -49,20 +49,17 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Матрица Эйзенхауэра'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.analytics),
-            onPressed: _showStatisticsDialog,
-          ),
-        ],
       ),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: _buildMatrix(),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 80),
+          child: Column(
+            children: [
+              _buildHeader(),
+              _buildMatrix(),
+            ],
           ),
-        ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddTaskDialog,
@@ -112,32 +109,30 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
         children: [
           _buildMatrixHeader(),
           const SizedBox(height: 16),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildQuadrant(1, 'Срочно\nВажно', AppTheme.errorColor),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildQuadrant(2, 'Не срочно\nВажно', AppTheme.accentColor),
-                ),
-              ],
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildQuadrant(1, 'Срочно\nВажно', AppTheme.errorColor),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuadrant(2, 'Не срочно\nВажно', AppTheme.accentColor),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildQuadrant(3, 'Срочно\nНе важно', AppTheme.warningColor),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildQuadrant(4, 'Не срочно\nНе важно', Colors.grey),
-                ),
-              ],
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildQuadrant(3, 'Срочно\nНе важно', AppTheme.warningColor),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuadrant(4, 'Не срочно\nНе важно', Colors.grey),
+              ),
+            ],
           ),
         ],
       ),
@@ -183,94 +178,98 @@ class _EisenhowerScreenState extends State<EisenhowerScreen> {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: color.withValues(alpha: 0.3), width: 2),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+      child: SizedBox(
+        height: 280,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _getQuadrantDescription(quadrant),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: color.withValues(alpha: 0.8),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${tasks.length}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _getQuadrantDescription(quadrant),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: color.withValues(alpha: 0.8),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${tasks.length}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: tasks.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.inbox_outlined,
-                          size: 40,
-                          color: color.withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Нет задач',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            Expanded(
+              child: tasks.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inbox_outlined,
+                            size: 40,
                             color: color.withValues(alpha: 0.5),
                           ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: tasks.length,
-                    itemBuilder: (context, index) {
-                      return AnimationConfiguration.staggeredList(
-                        position: index,
-                        duration: const Duration(milliseconds: 375),
-                        child: SlideAnimation(
-                          verticalOffset: 50.0,
-                          child: FadeInAnimation(
-                            child: _buildTaskCard(tasks[index], color),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Нет задач',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: color.withValues(alpha: 0.5),
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: tasks.length,
+                      itemBuilder: (context, index) {
+                        return AnimationConfiguration.staggeredList(
+                          position: index,
+                          duration: const Duration(milliseconds: 375),
+                          child: SlideAnimation(
+                            verticalOffset: 50.0,
+                            child: FadeInAnimation(
+                              child: _buildTaskCard(tasks[index], color),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
