@@ -185,10 +185,13 @@ class UserMetricsService {
           session.isCompleted;
     }).fold<int>(0, (sum, session) => sum + session.duration);
 
+    final activeTasks = _tasks.where((task) => task.status != TaskStatus.completed).length;
+
     final metrics = UserMetrics(
       totalTasks: _tasks.length,
       completedTasks: completedTasks,
       tasksDueToday: tasksDueToday,
+      activeTasks: activeTasks,
       totalHomework: _homework.length,
       completedHomework: completedHomework,
       overdueHomework: overdueHomework,
