@@ -64,6 +64,7 @@ class AppStateService {
 
   void _setupMetricsStream(String userId) {
     _listenToTasks(userId);
+    _listenToEisenhower(userId);
     _listenToHomework(userId);
     _listenToPomodoro(userId);
     _listenToCalendar(userId);
@@ -85,6 +86,13 @@ class AppStateService {
 
   void _listenToTasks(String userId) {
     final sub = _database.ref('users/$userId/tasks').onValue.listen((_) {
+      _emitMetrics();
+    });
+    _subscriptions.add(sub);
+  }
+
+  void _listenToEisenhower(String userId) {
+    final sub = _database.ref('users/$userId/eisenhower').onValue.listen((_) {
       _emitMetrics();
     });
     _subscriptions.add(sub);
@@ -128,12 +136,13 @@ class AppStateService {
 
     try {
       final tasksSnap = await _database.ref('users/$_currentUserId/tasks').get();
+      final eisenhowerSnap = await _database.ref('users/$_currentUserId/eisenhower').get();
       final homeworkSnap = await _database.ref('users/$_currentUserId/homework').get();
       final sessionsSnap = await _database.ref('users/$_currentUserId/pomodoro/sessions').get();
       final eventsSnap = await _database.ref('users/$_currentUserId/calendar').get();
       final notesSnap = await _database.ref('users/$_currentUserId/notes').get();
 
-      int totalTasks = 0, completedTasks = 0, tasksDueToday = 0;
+      int totalTasks = 0, completedTasks = 0, tasksDueToday = 0, activeTasks = 0;
       if (tasksSnap.exists && tasksSnap.value is Map) {
         final tasks = tasksSnap.value as Map;
         totalTasks = tasks.length;
@@ -220,6 +229,15 @@ class AppStateService {
         });
       }
 
+      if (eisenhowerSnap.exists && eisenhowerSnap.value is Map) {
+        final eisenhower = eisenhowerSnap.value as Map;
+        eisenhower.forEach((key, value) {
+          if (value is Map && value['isCompleted'] != true) {
+            activeTasks++;
+          }
+        });
+      }
+
       int notesCount = 0;
       if (notesSnap.exists && notesSnap.value is Map) {
         notesCount = (notesSnap.value as Map).length;
@@ -229,6 +247,7 @@ class AppStateService {
         totalTasks: totalTasks,
         completedTasks: completedTasks,
         tasksDueToday: tasksDueToday,
+        activeTasks: activeTasks,
         totalHomework: totalHomework,
         completedHomework: completedHomework,
         overdueHomework: overdueHomework,
