@@ -8,12 +8,15 @@ class AppStateService {
 
   factory AppStateService() => _instance;
 
-  AppStateService._internal();
+  AppStateService._internal() {
+    _metricsController = StreamController<UserMetrics>.broadcast();
+    _userDataController = StreamController<Map<String, dynamic>>.broadcast();
+  }
 
   final FirebaseDatabase _database = FirebaseDatabase.instance;
 
-  StreamController<UserMetrics>? _metricsController;
-  StreamController<Map<String, dynamic>>? _userDataController;
+  late final StreamController<UserMetrics> _metricsController;
+  late final StreamController<Map<String, dynamic>> _userDataController;
   
   final List<StreamSubscription> _subscriptions = [];
   String? _currentUserId;
@@ -42,26 +45,18 @@ class AppStateService {
 
   void dispose() {
     cleanup();
-    _metricsController?.close();
-    _userDataController?.close();
-    _metricsController = null;
-    _userDataController = null;
+    _metricsController.close();
+    _userDataController.close();
   }
 
   Stream<UserMetrics> watchMetrics() {
-    if (_metricsController == null || _metricsController!.isClosed) {
-      _metricsController = StreamController<UserMetrics>.broadcast();
-      _metricsController!.add(_cachedMetrics);
-    }
-    return _metricsController!.stream;
+    _metricsController.add(_cachedMetrics);
+    return _metricsController.stream;
   }
 
   Stream<Map<String, dynamic>> watchUserData() {
-    if (_userDataController == null || _userDataController!.isClosed) {
-      _userDataController = StreamController<Map<String, dynamic>>.broadcast();
-      _userDataController!.add(_cachedUserData);
-    }
-    return _userDataController!.stream;
+    _userDataController.add(_cachedUserData);
+    return _userDataController.stream;
   }
 
   UserMetrics get metrics => _cachedMetrics;
@@ -82,7 +77,7 @@ class AppStateService {
           (event.snapshot.value as Map).cast<String, dynamic>(),
         );
         _cachedUserData = data;
-        _userDataController?.add(_cachedUserData);
+        _userDataController.add(_cachedUserData);
       }
     });
     _subscriptions.add(sub);
@@ -246,7 +241,7 @@ class AppStateService {
       );
 
       _cachedMetrics = newMetrics;
-      _metricsController?.add(_cachedMetrics);
+      _metricsController.add(_cachedMetrics);
     } catch (_) {
       // Silently handle errors during metrics emission
     }
