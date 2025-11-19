@@ -26,15 +26,26 @@ class NoteService {
           .ref('users/${user.uid}/notes')
           .onValue
           .map((event) {
-            if (event.snapshot.exists) {
-              final notes = <Note>[];
-              final data = event.snapshot.value as Map<dynamic, dynamic>;
-              data.forEach((key, value) {
-                notes.add(Note.fromMap(value, key));
-              });
-              return notes;
+            final notes = <Note>[];
+            try {
+              if (event.snapshot.exists && event.snapshot.value != null) {
+                final data = event.snapshot.value;
+                if (data is Map) {
+                  data.forEach((key, value) {
+                    try {
+                      if (value is Map) {
+                        notes.add(Note.fromMap(value as Map<dynamic, dynamic>, key.toString()));
+                      }
+                    } catch (e) {
+                      print('Error parsing note $key: $e');
+                    }
+                  });
+                }
+              }
+            } catch (e) {
+              print('Error loading notes: $e');
             }
-            return [];
+            return notes..sort((a, b) => b.createdAt.compareTo(a.createdAt));
           });
     }
     return Stream.value([]);
@@ -45,7 +56,7 @@ class NoteService {
     if (user != null) {
       await _firebaseService.database
           .ref('users/${user.uid}/notes/${updatedNote.id}')
-          .update(updatedNote.toMap());
+          .set(updatedNote.toMap());
     }
   }
 

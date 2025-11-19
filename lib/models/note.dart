@@ -13,13 +13,25 @@ class Note {
     this.updatedAt,
   });
 
-  factory Note.fromMap(Map<String, dynamic> map, String id) {
+  factory Note.fromMap(Map<dynamic, dynamic> map, String id) {
+    DateTime? parsedDate(dynamic value) {
+      if (value == null) return null;
+      try {
+        if (value is String && value.isNotEmpty) {
+          return DateTime.parse(value);
+        }
+      } catch (e) {
+        print('Error parsing date: $e');
+      }
+      return null;
+    }
+
     return Note(
       id: id,
-      title: map['title'] ?? '',
-      content: map['content'],
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
+      title: map['title']?.toString() ?? '',
+      content: map['content']?.toString(),
+      createdAt: parsedDate(map['createdAt']) ?? DateTime.now(),
+      updatedAt: parsedDate(map['updatedAt']),
     );
   }
 
