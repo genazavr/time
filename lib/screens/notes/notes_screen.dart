@@ -15,6 +15,7 @@ class _NotesScreenState extends State<NotesScreen> {
   final NoteService _noteService = NoteService();
   List<Note> _notes = [];
   String _searchQuery = '';
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -24,16 +25,18 @@ class _NotesScreenState extends State<NotesScreen> {
 
   void _loadNotes() {
     _noteService.getNotes().listen((notes) {
-      setState(() {
-        _notes = notes;
-      });
+      if (mounted) {
+        setState(() {
+          _notes = notes;
+        });
+      }
     });
   }
 
   List<Note> get _filteredNotes {
     if (_searchQuery.isEmpty) return _notes;
     return _notes.where((note) =>
-        note.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+    note.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
         (note.content?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false)
     ).toList();
   }
@@ -42,24 +45,45 @@ class _NotesScreenState extends State<NotesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Заметки'),
+        title: _isSearching
+            ? TextField(
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Поиск заметок...',
+            border: InputBorder.none,
+            hintStyle: TextStyle(color: Colors.white70),
+          ),
+          style: const TextStyle(color: Colors.white),
+          onChanged: (value) {
+            setState(() {
+              _searchQuery = value;
+            });
+          },
+        )
+            : const Text('Заметки'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: _toggleSearch,
-          ),
+          if (_isSearching)
+            IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: () {
+                setState(() {
+                  _isSearching = false;
+                  _searchQuery = '';
+                });
+              },
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                setState(() {
+                  _isSearching = true;
+                });
+              },
+            ),
         ],
       ),
-      body: Column(
-        children: [
-          if (_searchQuery.isNotEmpty) _buildSearchBar(),
-          Expanded(
-            child: _filteredNotes.isEmpty
-                ? _buildEmptyState()
-                : _buildNotesGrid(),
-          ),
-        ],
-      ),
+      body: _buildBody(),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddNoteDialog,
         child: const Icon(Icons.add),
@@ -67,30 +91,16 @@ class _NotesScreenState extends State<NotesScreen> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: TextField(
-        autofocus: true,
-        decoration: InputDecoration(
-          hintText: 'Поиск заметок...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: IconButton(
-            icon: const Icon(Icons.clear),
-            onPressed: () {
-              setState(() {
-                _searchQuery = '';
-              });
-            },
-          ),
-        ),
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-          });
-        },
-      ),
-    );
+  Widget _buildBody() {
+    if (_notes.isEmpty && _searchQuery.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    if (_filteredNotes.isEmpty && _searchQuery.isNotEmpty) {
+      return _buildNoResultsState();
+    }
+
+    return _buildNotesGrid();
   }
 
   Widget _buildEmptyState() {
@@ -105,20 +115,47 @@ class _NotesScreenState extends State<NotesScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            _searchQuery.isNotEmpty ? 'Заметки не найдены' : 'Нет заметок',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            'Нет заметок',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: Colors.grey.shade600,
             ),
           ),
-          if (_searchQuery.isEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Нажмите + чтобы создать первую заметку',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey.shade500,
-              ),
+          const SizedBox(height: 8),
+          Text(
+            'Нажмите + чтобы создать первую заметку',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey.shade500,
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoResultsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Заметки не найдены',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Попробуйте изменить поисковый запрос',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey.shade500,
+            ),
+          ),
         ],
       ),
     );
@@ -166,19 +203,22 @@ class _NotesScreenState extends State<NotesScreen> {
     final color = colors[note.title.hashCode % colors.length];
 
     return Card(
-      elevation: 2,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: InkWell(
         onTap: () => _showNoteDetails(note),
         onLongPress: () => _showNoteActions(note),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
               colors: [
-                color.withValues(alpha: 0.1),
-                color.withValues(alpha: 0.05),
+                color.withOpacity(0.1),
+                color.withOpacity(0.05),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -188,6 +228,7 @@ class _NotesScreenState extends State<NotesScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Text(
@@ -201,6 +242,7 @@ class _NotesScreenState extends State<NotesScreen> {
                     ),
                   ),
                   PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, size: 20, color: color),
                     onSelected: (value) {
                       switch (value) {
                         case 'edit':
@@ -240,17 +282,25 @@ class _NotesScreenState extends State<NotesScreen> {
               Expanded(
                 child: Text(
                   note.content ?? '',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey.shade700,
+                  ),
                   maxLines: 6,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                _formatDate(note.createdAt),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+              Row(
+                children: [
+                  Icon(Icons.access_time, size: 12, color: Colors.grey.shade500),
+                  const SizedBox(width: 4),
+                  Text(
+                    _formatDate(note.createdAt),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -263,20 +313,14 @@ class _NotesScreenState extends State<NotesScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final noteDate = DateTime(date.year, date.month, date.day);
-    
+
     if (noteDate.isAtSameMomentAs(today)) {
       return 'Сегодня';
     } else if (noteDate.isAtSameMomentAs(today.subtract(const Duration(days: 1)))) {
       return 'Вчера';
     } else {
-      return '${date.day}.${date.month}.${date.year}';
+      return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
     }
-  }
-
-  void _toggleSearch() {
-    setState(() {
-      _searchQuery = _searchQuery.isEmpty ? '' : '';
-    });
   }
 
   void _showAddNoteDialog() {
@@ -308,7 +352,10 @@ class _NotesScreenState extends State<NotesScreen> {
       builder: (context) => AlertDialog(
         title: Text(note.title),
         content: SingleChildScrollView(
-          child: Text(note.content ?? ''),
+          child: Text(
+            note.content ?? '',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
         ),
         actions: [
           TextButton(
@@ -321,7 +368,32 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   void _showNoteActions(Note note) {
-    _showNoteDetails(note);
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Редактировать'),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditNoteDialog(note);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Удалить', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteNote(note);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _deleteNote(Note note) {
@@ -338,7 +410,7 @@ class _NotesScreenState extends State<NotesScreen> {
           TextButton(
             onPressed: () async {
               await _noteService.deleteNote(note.id);
-              Navigator.pop(context);
+              if (mounted) Navigator.pop(context);
             },
             child: const Text('Удалить', style: TextStyle(color: Colors.red)),
           ),
@@ -395,7 +467,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Заголовок',
                   hintText: 'Введите заголовок заметки',
+                  border: OutlineInputBorder(),
                 ),
+                maxLines: 2,
               ),
               const SizedBox(height: 16),
               TextField(
@@ -403,8 +477,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Содержание',
                   hintText: 'Введите содержание заметки',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
                 ),
                 maxLines: 8,
+                textAlignVertical: TextAlignVertical.top,
               ),
             ],
           ),
@@ -434,8 +511,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     final note = Note(
       id: widget.existingNote?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       title: _titleController.text.trim(),
-      content: _contentController.text.trim().isEmpty 
-          ? null 
+      content: _contentController.text.trim().isEmpty
+          ? null
           : _contentController.text.trim(),
       createdAt: widget.existingNote?.createdAt ?? DateTime.now(),
       updatedAt: widget.existingNote != null ? DateTime.now() : null,

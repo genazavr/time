@@ -4,6 +4,7 @@ import 'package:just_audio/just_audio.dart';
 import '../../models/pomodoro_session.dart';
 import '../../services/pomodoro_service.dart';
 import '../../theme/app_theme.dart';
+import 'dart:math';
 
 class PomodoroScreen extends StatefulWidget {
   const PomodoroScreen({super.key});
@@ -15,11 +16,12 @@ class PomodoroScreen extends StatefulWidget {
 class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStateMixin {
   final PomodoroService _pomodoroService = PomodoroService();
   final AudioPlayer _audioPlayer = AudioPlayer();
-  
+
   late AnimationController _pulseController;
   late AnimationController _progressController;
   late Animation<double> _pulseAnimation;
-  
+  late Animation<double> _scaleAnimation;
+
   Timer? _timer;
   int _remainingSeconds = 25 * 60;
   int _totalSeconds = 25 * 60;
@@ -29,7 +31,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
   String _currentTask = '';
   int _sessionsCompleted = 0;
   int _currentSessionInCycle = 1;
-  
+
   PomodoroSettings _settings = PomodoroSettings();
   Map<String, dynamic> _statistics = {};
 
@@ -43,16 +45,24 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
 
   void _initializeAnimations() {
     _pulseController = AnimationController(
-      duration: const Duration(seconds: 1),
+      duration: const Duration(seconds: 2),
       vsync: this,
     );
     _progressController = AnimationController(
       duration: const Duration(seconds: 1),
       vsync: this,
     );
-    
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+
+    _pulseAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.03), weight: 1),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.03, end: 1.0), weight: 1),
+    ]).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _progressController, curve: Curves.easeOut),
     );
   }
 
@@ -106,12 +116,12 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
 
   void _startTimer() async {
     if (_isRunning && !_isPaused) return;
-    
+
     setState(() {
       _isRunning = true;
       _isPaused = false;
     });
-    
+
     if (!_isPaused) {
       final session = PomodoroSession(
         id: '',
@@ -121,18 +131,17 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
         taskTitle: _currentTask.isEmpty ? null : _currentTask,
         createdAt: DateTime.now(),
       );
-      
+
       await _pomodoroService.startSession(session);
     }
-    
+
     _pulseController.repeat(reverse: true);
     _progressController.forward(from: _progressController.value);
-    
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds > 0) {
         setState(() {
           _remainingSeconds--;
-          // Обновляем прогресс анимацию
           final progress = 1.0 - (_remainingSeconds / _totalSeconds);
           _progressController.value = progress;
         });
@@ -146,7 +155,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
     _timer?.cancel();
     _pulseController.stop();
     _progressController.stop();
-    
+
     setState(() {
       _isRunning = false;
       _isPaused = true;
@@ -157,7 +166,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
     _timer?.cancel();
     _pulseController.reset();
     _progressController.reset();
-    
+
     setState(() {
       _isRunning = false;
       _isPaused = false;
@@ -169,11 +178,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
     _timer?.cancel();
     _pulseController.stop();
     _progressController.stop();
-    
-    // Завершаем сессию в Firebase
+
     if (_currentType == 'work') {
       try {
-        // Получаем последнюю сессию и отмечаем ее завершенной
         final sessions = await _pomodoroService.getSessions().first;
         final workSessions = sessions.where((s) => s.type == 'work' && !s.isCompleted).toList();
         if (workSessions.isNotEmpty) {
@@ -184,11 +191,11 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
         debugPrint('Error completing session: $e');
       }
     }
-    
+
     if (_settings.soundEnabled) {
       await _playCompletionSound();
     }
-    
+
     setState(() {
       _isRunning = false;
       _isPaused = false;
@@ -197,7 +204,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
         _currentSessionInCycle++;
       }
     });
-    
+
     _showCompletionDialog();
     _loadStatistics();
   }
@@ -215,7 +222,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
     String nextType;
     String title;
     String message;
-    
+
     if (_currentType == 'work') {
       if (_currentSessionInCycle >= _settings.longBreakInterval) {
         nextType = 'long_break';
@@ -232,7 +239,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
       title = 'Перерыв завершен!';
       message = 'Отдохнули? Время для новой рабочей сессии!';
     }
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -318,20 +325,21 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildStatsCards(),
-          const SizedBox(height: 20),
-          _buildTypeSelector(),
-          const SizedBox(height: 40),
-          _buildTimer(),
-          const SizedBox(height: 40),
-          _buildControls(),
-          const SizedBox(height: 20),
-          _buildTaskInput(),
-          const SizedBox(height: 20),
-        ],
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildStatsCards(),
+            const SizedBox(height: 20),
+            _buildTypeSelector(),
+            const SizedBox(height: 40),
+            _buildTimer(),
+            const SizedBox(height: 40),
+            _buildControls(),
+            const SizedBox(height: 20),
+            _buildTaskInput(),
+            const SizedBox(height: 40),
+          ],
+        ),
       ),
     );
   }
@@ -343,6 +351,10 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
         children: [
           Expanded(
             child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -369,6 +381,10 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
           ),
           Expanded(
             child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -395,6 +411,10 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
           ),
           Expanded(
             child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -444,14 +464,21 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
       onTap: _isRunning ? null : () => _switchToType(type),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected ? _getTypeColor() : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(25),
           border: Border.all(
             color: _getTypeColor(),
             width: 2,
           ),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: _getTypeColor().withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ] : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -476,64 +503,136 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
   }
 
   Widget _buildTimer() {
-    return AnimatedBuilder(
-      animation: Listenable.merge([_pulseController, _progressController]),
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _isRunning ? _pulseAnimation.value : 1.0,
-          child: SizedBox(
-            width: 250,
-            height: 250,
-            child: Stack(
-              children: [
-                Container(
-                  width: 250,
-                  height: 250,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _getTypeColor().withValues(alpha: 0.1),
-                    border: Border.all(
-                      color: _getTypeColor(),
-                      width: 8,
+    return Center(
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_pulseController, _progressController]),
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _isRunning ? _pulseAnimation.value : 1.0,
+            child: Container(
+              width: 280,
+              height: 280,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: _getTypeColor().withOpacity(0.2),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Внешний круг с градиентом
+                  Container(
+                    width: 280,
+                    height: 280,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          _getTypeColor().withOpacity(0.1),
+                          _getTypeColor().withOpacity(0.05),
+                        ],
+                        stops: const [0.5, 1.0],
+                      ),
+                      border: Border.all(
+                        color: _getTypeColor().withOpacity(0.3),
+                        width: 8,
+                      ),
                     ),
                   ),
-                ),
-                if (_isRunning || _isPaused)
-                  Positioned.fill(
-                    child: CircularProgressIndicator(
-                      value: 1.0 - (_remainingSeconds / _totalSeconds),
-                      strokeWidth: 8,
-                      backgroundColor: Colors.transparent,
-                      valueColor: AlwaysStoppedAnimation<Color>(_getTypeColor()),
+
+                  // Прогресс круг
+                  if (_isRunning || _isPaused)
+                    SizedBox(
+                      width: 280,
+                      height: 280,
+                      child: CircularProgressIndicator(
+                        value: 1.0 - (_remainingSeconds / _totalSeconds),
+                        strokeWidth: 8,
+                        backgroundColor: Colors.transparent,
+                        valueColor: AlwaysStoppedAnimation<Color>(_getTypeColor()),
+                        strokeCap: StrokeCap.round,
+                      ),
+                    ),
+
+                  // Внутренний круг
+                  Container(
+                    width: 240,
+                    height: 240,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _getTypeTitle(),
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: _getTypeColor(),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _formatTime(_remainingSeconds),
+                          style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            color: _getTypeColor(),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 48,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_currentTask.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Text(
+                              _currentTask,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey.shade600,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _getTypeTitle(),
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+
+                  // Точки прогресса
+                  if (_isRunning || _isPaused)
+                    SizedBox(
+                      width: 280,
+                      height: 280,
+                      child: CustomPaint(
+                        painter: _ProgressDotsPainter(
+                          progress: 1.0 - (_remainingSeconds / _totalSeconds),
                           color: _getTypeColor(),
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _formatTime(_remainingSeconds),
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: _getTypeColor(),
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -544,41 +643,64 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
         if (!_isRunning && !_isPaused)
           ElevatedButton.icon(
             onPressed: _startTimer,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Старт'),
+            icon: const Icon(Icons.play_arrow, size: 24),
+            label: const Text('Старт', style: TextStyle(fontSize: 16)),
             style: ElevatedButton.styleFrom(
               backgroundColor: _getTypeColor(),
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              elevation: 4,
+              shadowColor: _getTypeColor().withOpacity(0.3),
             ),
           ),
         if (_isRunning)
           ElevatedButton.icon(
             onPressed: _pauseTimer,
-            icon: const Icon(Icons.pause),
-            label: const Text('Пауза'),
+            icon: const Icon(Icons.pause, size: 24),
+            label: const Text('Пауза', style: TextStyle(fontSize: 16)),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.warningColor,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              elevation: 4,
+              shadowColor: AppTheme.warningColor.withOpacity(0.3),
             ),
           ),
         if (_isPaused)
           ElevatedButton.icon(
             onPressed: _startTimer,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Продолжить'),
+            icon: const Icon(Icons.play_arrow, size: 24),
+            label: const Text('Продолжить', style: TextStyle(fontSize: 16)),
             style: ElevatedButton.styleFrom(
               backgroundColor: _getTypeColor(),
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              elevation: 4,
+              shadowColor: _getTypeColor().withOpacity(0.3),
             ),
           ),
         const SizedBox(width: 16),
         if (_isRunning || _isPaused)
           OutlinedButton.icon(
             onPressed: _resetTimer,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Сброс'),
+            icon: const Icon(Icons.refresh, size: 24),
+            label: const Text('Сброс', style: TextStyle(fontSize: 16)),
             style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey.shade700,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              side: BorderSide(color: Colors.grey.shade400),
             ),
           ),
       ],
@@ -596,6 +718,14 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
           labelText: 'Текущая задача',
           hintText: 'Что вы делаете сейчас?',
           prefixIcon: const Icon(Icons.task),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: _getTypeColor()),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: _getTypeColor(), width: 2),
+          ),
         ),
       ),
     );
@@ -642,7 +772,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
   void _showDurationDialog(String setting) {
     int currentValue;
     String title;
-    
+
     switch (setting) {
       case 'workDuration':
         currentValue = _settings.workDuration;
@@ -659,7 +789,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
       default:
         return;
     }
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -743,4 +873,35 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
       ),
     );
   }
+}
+
+class _ProgressDotsPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  _ProgressDotsPainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    const totalDots = 60;
+    final radius = size.width / 2;
+    final dotRadius = 3.0;
+
+    for (int i = 0; i < totalDots; i++) {
+      final angle = 2 * pi * i / totalDots;
+      final x = radius + (radius - 20) * cos(angle);
+      final y = radius + (radius - 20) * sin(angle);
+
+      if (i / totalDots <= progress) {
+        canvas.drawCircle(Offset(x, y), dotRadius, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

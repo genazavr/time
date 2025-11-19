@@ -419,7 +419,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               _buildHeaderStat(
                 context,
-                title: 'Задачи',
+                title: 'Прогресс',
                 value: metrics.totalTasks > 0
                     ? '${metrics.completedTasks}/${metrics.totalTasks}'
                     : '0',
