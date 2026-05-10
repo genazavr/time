@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'services/app_state_service.dart';
 import 'services/firebase_service.dart';
 import 'services/notification_center_service.dart';
@@ -13,13 +14,27 @@ import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
+  SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.immersiveSticky,
+    overlays: [],
+  );
+
   final firebaseService = FirebaseService();
   await firebaseService.initialize();
-  
+
   final notificationService = NotificationService();
   await notificationService.initialize();
   await notificationService.requestPermissions();
-  
+
   runApp(const MyApp());
 }
 
@@ -30,6 +45,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'BLISS',
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
@@ -47,7 +63,8 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   final FirebaseService _firebaseService = FirebaseService();
-  final NotificationCenterService _notificationCenter = NotificationCenterService();
+  final NotificationCenterService _notificationCenter =
+      NotificationCenterService();
   final AppStateService _appStateService = AppStateService();
   StreamSubscription<User?>? _authSubscription;
 
@@ -130,8 +147,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
               Text(
                 'BLISS',
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),

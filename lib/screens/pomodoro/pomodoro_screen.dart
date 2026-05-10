@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../models/pomodoro_session.dart';
 import '../../services/pomodoro_service.dart';
+import '../../services/gamification_service.dart';
 import '../../theme/app_theme.dart';
 import 'dart:math';
 
@@ -13,7 +14,8 @@ class PomodoroScreen extends StatefulWidget {
   State<PomodoroScreen> createState() => _PomodoroScreenState();
 }
 
-class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStateMixin {
+class _PomodoroScreenState extends State<PomodoroScreen>
+    with TickerProviderStateMixin {
   final PomodoroService _pomodoroService = PomodoroService();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -34,6 +36,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
 
   PomodoroSettings _settings = PomodoroSettings();
   Map<String, dynamic> _statistics = {};
+  final GamificationService _gamificationService = GamificationService();
 
   @override
   void initState() {
@@ -53,13 +56,19 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
       vsync: this,
     );
 
-    _pulseAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.03), weight: 1),
-      TweenSequenceItem(tween: Tween<double>(begin: 1.03, end: 1.0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+    _pulseAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(
+            tween: Tween<double>(begin: 1.0, end: 1.03),
+            weight: 1,
+          ),
+          TweenSequenceItem(
+            tween: Tween<double>(begin: 1.03, end: 1.0),
+            weight: 1,
+          ),
+        ]).animate(
+          CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+        );
 
     _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _progressController, curve: Curves.easeOut),
@@ -182,10 +191,17 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
     if (_currentType == 'work') {
       try {
         final sessions = await _pomodoroService.getSessions().first;
-        final workSessions = sessions.where((s) => s.type == 'work' && !s.isCompleted).toList();
+        final workSessions = sessions
+            .where((s) => s.type == 'work' && !s.isCompleted)
+            .toList();
         if (workSessions.isNotEmpty) {
           final lastSession = workSessions.last;
-          await _pomodoroService.completeSession(lastSession.id, DateTime.now());
+          await _pomodoroService.completeSession(
+            lastSession.id,
+            DateTime.now(),
+          );
+          await _gamificationService.addPomodoro(_settings.workDuration);
+          await _gamificationService.updateStreak();
         }
       } catch (e) {
         debugPrint('Error completing session: $e');
@@ -263,7 +279,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
               Navigator.pop(context);
               _switchToType(nextType);
             },
-            child: Text(_currentType == 'work' ? 'Начать перерыв' : 'Начать работу'),
+            child: Text(
+              _currentType == 'work' ? 'Начать перерыв' : 'Начать работу',
+            ),
           ),
         ],
       ),
@@ -365,10 +383,11 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
                     ),
                     Text(
                       '${_statistics['todaySessions'] ?? 0}',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppTheme.primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     Text(
                       'сессий',
@@ -389,16 +408,14 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    Text(
-                      'Фокус',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text('Фокус', style: Theme.of(context).textTheme.bodySmall),
                     Text(
                       '${(_statistics['todayFocusTime'] ?? 0)} мин',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppTheme.accentColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: AppTheme.accentColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     Text(
                       'сегодня',
@@ -419,16 +436,14 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    Text(
-                      'Всего',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text('Всего', style: Theme.of(context).textTheme.bodySmall),
                     Text(
                       '$_sessionsCompleted',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppTheme.secondaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: AppTheme.secondaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     Text(
                       'завершено',
@@ -468,17 +483,16 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
         decoration: BoxDecoration(
           color: isSelected ? _getTypeColor() : Colors.transparent,
           borderRadius: BorderRadius.circular(25),
-          border: Border.all(
-            color: _getTypeColor(),
-            width: 2,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: _getTypeColor().withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            )
-          ] : null,
+          border: Border.all(color: _getTypeColor(), width: 2),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: _getTypeColor().withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -554,7 +568,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
                         value: 1.0 - (_remainingSeconds / _totalSeconds),
                         strokeWidth: 8,
                         backgroundColor: Colors.transparent,
-                        valueColor: AlwaysStoppedAnimation<Color>(_getTypeColor()),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          _getTypeColor(),
+                        ),
                         strokeCap: StrokeCap.round,
                       ),
                     ),
@@ -579,22 +595,24 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
                       children: [
                         Text(
                           _getTypeTitle(),
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: _getTypeColor(),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 18,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: _getTypeColor(),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 18,
+                              ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _formatTime(_remainingSeconds),
-                          style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            color: _getTypeColor(),
-                            fontWeight: FontWeight.w800,
-                            fontSize: 48,
-                            letterSpacing: 2,
-                          ),
+                          style: Theme.of(context).textTheme.displayLarge
+                              ?.copyWith(
+                                color: _getTypeColor(),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 48,
+                                letterSpacing: 2,
+                              ),
                         ),
                         const SizedBox(height: 8),
                         if (_currentTask.isNotEmpty)
@@ -602,10 +620,11 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
                             padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: Text(
                               _currentTask,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey.shade600,
-                                fontStyle: FontStyle.italic,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Colors.grey.shade600,
+                                    fontStyle: FontStyle.italic,
+                                  ),
                               textAlign: TextAlign.center,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -798,7 +817,10 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('$currentValue минут', style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                '$currentValue минут',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               Slider(
                 value: currentValue.toDouble(),
@@ -824,13 +846,19 @@ class _PomodoroScreenState extends State<PomodoroScreen> with TickerProviderStat
                 setState(() {
                   switch (setting) {
                     case 'workDuration':
-                      _settings = _settings.copyWith(workDuration: currentValue);
+                      _settings = _settings.copyWith(
+                        workDuration: currentValue,
+                      );
                       break;
                     case 'shortBreakDuration':
-                      _settings = _settings.copyWith(shortBreakDuration: currentValue);
+                      _settings = _settings.copyWith(
+                        shortBreakDuration: currentValue,
+                      );
                       break;
                     case 'longBreakDuration':
-                      _settings = _settings.copyWith(longBreakDuration: currentValue);
+                      _settings = _settings.copyWith(
+                        longBreakDuration: currentValue,
+                      );
                       break;
                   }
                   _updateTimerDuration();

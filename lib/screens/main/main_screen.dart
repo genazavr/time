@@ -8,6 +8,7 @@ import '../schedule/schedule_screen.dart';
 import '../podcasts/podcasts_screen.dart';
 import '../profile/profile_screen.dart';
 import '../home/home_screen.dart';
+import '../chat/chat_screen.dart';
 import '../../widgets/audio_player_widget.dart';
 
 class MainScreen extends StatefulWidget {
@@ -31,6 +32,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     const ScheduleScreen(),
     const PodcastsScreen(),
     const ProfileScreen(),
+    const ChatScreen(),
   ];
 
   @override
@@ -102,7 +104,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.transparent,
+          color: isSelected
+              ? AppTheme.primaryColor.withValues(alpha: 0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(

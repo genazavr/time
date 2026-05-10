@@ -15,6 +15,10 @@ import '../notes/notes_screen.dart';
 import '../schedule/schedule_screen.dart';
 import '../podcasts/podcasts_screen.dart';
 import '../profile/profile_screen.dart';
+import '../chat/chat_screen.dart';
+import '../emotions/control_sphere_screen.dart';
+import '../emotions/zato_screen.dart';
+import '../stats/stats_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -168,13 +172,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                 backgroundImage: img,
                 child: img == null
-                    ? Icon(Icons.person_outline,
-                    color: AppTheme.primaryColor, size: 28)
+                    ? Icon(
+                        Icons.person_outline,
+                        color: AppTheme.primaryColor,
+                        size: 28,
+                      )
                     : null,
               ),
             );
           },
-        )
+        ),
       ],
     );
   }
@@ -279,11 +286,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       ),
       _NavigationButton(
-        icon: Icons.analytics_outlined,
-        label: 'Прогресс',
-        color: Colors.teal,
-        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Статистика скоро будет доступна')),
+        icon: Icons.psychology_outlined,
+        label: 'Нейросеть',
+        color: Colors.purple,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (c) => const ChatScreen()),
+        ),
+      ),
+      _NavigationButton(
+        icon: Icons.pie_chart_outline,
+        label: 'Сферы контроля',
+        color: Colors.orange,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (c) => const ControlSphereScreen()),
+        ),
+      ),
+      _NavigationButton(
+        icon: Icons.lightbulb_outline,
+        label: 'Техника ЗАТО',
+        color: Colors.amber,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (c) => const ZatoScreen()),
+        ),
+      ),
+      _NavigationButton(
+        icon: Icons.bar_chart_rounded,
+        label: 'Статистика',
+        color: Colors.indigo,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (c) => const StatsScreen()),
         ),
       ),
     ];
@@ -313,6 +348,46 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  static final List<String> _dailyTips = [
+    'Начни день с техники Помодоро — 25 минут сфокусированной работы помогут достичь большего.',
+    'Используй правило 2 минут: если дело занимает меньше 2 минут — сделай его сразу.',
+    'Планируй завтрашний день вечером — утром будешь знать, с чего начать.',
+    'Делай перерывы каждые 90 минут — мозг лучше работает с короткими паузами.',
+    'Записывай все задачи — освободи память для важных мыслей.',
+    'Начинай с самого сложного — потом всё остальное будет легче.',
+    'Используй матрицу Эйзенхауэра: сначала важное и срочное.',
+    'Не проверяй почту утром — начни с главной задачи дня.',
+    'Высыпайся — продуктивность важнее количества часов работы.',
+    'Убери отвлекающие уведомления на время фокуса.',
+    'Используй «двадцатисекундное правило» — начни заниматься, и инерция понесёт.',
+    'Ставь таймер на 25 минут и работай без перерыва — потом отдохнёшь.',
+    'Разбей большую задачу на маленькие шаги — так проще начать.',
+    'Заканчивай день на 80% — не пытайся сделать всё идеально.',
+    'Веди дневник благодарности — это повышает мотивацию.',
+    'Используй утренние часы для творческой работы.',
+    'Говори «нет» лишним обязательствам — защищай своё время.',
+    'Делай одно дело за раз — мультитаскинг снижает качество.',
+    'Создай «тёмный час» — время без соцсетей и интернета.',
+    'Движение = энергия: 5 минут зарядки перед работой.',
+    'Задавай себе вопрос: «Это приближает меня к цели?»',
+    'Отдыхай активно: прогулка лучше, чем Netflix.',
+    'Визуализируй успех — это повышает вероятность достижения.',
+    'Не жди вдохновения — начни, и оно придёт.',
+    'Анализируй свой день: что было продуктивно, а что — нет.',
+    'Используй правило «одного дела» — сделал, забыл.',
+    'Пей воду — обезвоживание снижает концентрацию.',
+    'Работай стоя или на ходу — это повышает энергию.',
+    'Делай «мозговой штурм» — записывай все идеи без цензуры.',
+    'Благодари себя за маленькие победы — это мотивирует.',
+  ];
+
+  String get _todayTip {
+    final dayOfYear = DateTime.now()
+        .difference(DateTime(DateTime.now().year, 1, 1))
+        .inDays;
+    return _dailyTips[dayOfYear % _dailyTips.length];
+  }
+
   Widget _buildBottomCard() {
     return Container(
       width: double.infinity,
@@ -325,17 +400,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.lightbulb_outline,
-                  color: AppTheme.primaryColor, size: 20),
+              Icon(
+                Icons.lightbulb_outline,
+                color: AppTheme.primaryColor,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Совет дня',
@@ -348,10 +424,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 8),
           Text(
-            'Начни день с техники Помодоро — 25 минут сфокусированной работы помогут достичь большего.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.shade700,
-            ),
+            _todayTip,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
           ),
         ],
       ),
@@ -388,9 +464,10 @@ class _NavigationButtonState extends State<_NavigationButton>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scale = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _c, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut));
   }
 
   @override
@@ -423,9 +500,7 @@ class _NavigationButtonState extends State<_NavigationButton>
                   offset: const Offset(0, 4),
                 ),
               ],
-              border: Border.all(
-                color: widget.color.withValues(alpha: 0.1),
-              ),
+              border: Border.all(color: widget.color.withValues(alpha: 0.1)),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
