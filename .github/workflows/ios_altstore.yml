@@ -27,13 +27,19 @@ jobs:
         run: |
           flutter pub get
 
-      - name: Build for simulator (unsigned)
+      - name: Build iOS release (no codesign)
         run: |
-          flutter build ios --simulator --no-codesign
+          flutter build ios --verbose
 
-      - name: Create unsigned release build
+      - name: Verify build output
         run: |
-          flutter build ios --release --no-codesign
+          if [ -d "build/ios/iphoneos/Runner.app" ]; then
+            echo "✅ iOS build successful: Runner.app found"
+          else
+            echo "❌ iOS build failed: Runner.app not found"
+            ls -la build/ios/iphoneos/
+            exit 1
+          fi
 
       - name: Package for AltStore (correct IPA structure)
         run: |
@@ -46,7 +52,7 @@ jobs:
       - name: Verify IPA structure
         run: |
           unzip -l build/ios/AltStore/Runner.ipa
-          ls -la build/ios/AltStore/Runner.ipa
+          ls -lh build/ios/AltStore/Runner.ipa
 
       - name: Upload IPA for AltStore
         uses: actions/upload-artifact@v4
