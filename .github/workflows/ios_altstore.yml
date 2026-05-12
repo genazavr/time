@@ -35,23 +35,22 @@ jobs:
         run: |
           flutter build ios --release --no-codesign
 
-      - name: Package for AltStore
+      - name: Package for AltStore (correct IPA structure)
         run: |
           mkdir -p build/ios/AltStore
-          cp -R build/ios/iphoneos/Runner.app build/ios/AltStore/
+          mkdir -p build/ios/AltStore/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ios/AltStore/Payload/
           cd build/ios/AltStore
           zip -r Runner.ipa Payload
+
+      - name: Verify IPA structure
+        run: |
+          unzip -l build/ios/AltStore/Runner.ipa
+          ls -la build/ios/AltStore/Runner.ipa
 
       - name: Upload IPA for AltStore
         uses: actions/upload-artifact@v4
         with:
           name: BLISS-AltStore
           path: build/ios/AltStore/Runner.ipa
-          retention-days: 7
-
-      - name: Upload simulator app
-        uses: actions/upload-artifact@v4
-        with:
-          name: BLISS-simulator
-          path: build/ios/iphonesimulator/Runner.app
           retention-days: 7
