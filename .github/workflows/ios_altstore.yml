@@ -35,16 +35,18 @@ jobs:
         run: |
           flutter build ios --release --no-codesign
 
-      - name: Create IPA (zip with .ipa extension)
+      - name: Package for AltStore
         run: |
-          cd build/ios/iphoneos
-          zip -r ../Runner.ipa Runner.app
+          mkdir -p build/ios/AltStore
+          cp -R build/ios/iphoneos/Runner.app build/ios/AltStore/
+          cd build/ios/AltStore
+          zip -r Runner.ipa Payload
 
       - name: Upload IPA for AltStore
         uses: actions/upload-artifact@v4
         with:
           name: BLISS-AltStore
-          path: build/ios/Runner.ipa
+          path: build/ios/AltStore/Runner.ipa
           retention-days: 7
 
       - name: Upload simulator app
